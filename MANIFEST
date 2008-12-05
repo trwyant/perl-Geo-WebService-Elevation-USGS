@@ -1,0 +1,13 @@
+Changes
+Build.PL
+eg/README
+eg/usgs_ele
+lib/Geo/WebService/Elevation/USGS.pm
+Makefile.PL
+MANIFEST			This list of files
+META.yml
+README
+t/basic.t
+t/elev.t
+t/pod.t
+t/pod_coverage.t

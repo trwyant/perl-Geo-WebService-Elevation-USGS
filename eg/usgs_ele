@@ -1,0 +1,142 @@
+#!/usr/local/bin/perl
+
+# This is a simple script that allows use of Geo::WebService::Elevation::USGS from
+# the command line.
+
+use strict;
+use warnings;
+
+use Geo::WebService::Elevation::USGS;
+BEGIN {
+    eval {use Time::HiRes qw{time alarm sleep}};
+}
+
+# Output is by whatever dumper is available.
+
+my $dumper = eval {
+    require YAML and YAML->can('Dump')} || eval {
+    require YAML::Syck and YAML::Syck->can('Dump')} || eval {
+    require Data::Dumper and Data::Dumper->can('Dumper')}
+    or die "Can not load YAML or YAML::Syck or Data::Dumper";
+
+# If interactive, input is by Term::ReadLine if available, or a simple
+# subroutine otherwise. If not interactive, we just read STDIN.
+
+my $prompt = 'usgs_ele> ';
+my $read = -t STDIN ?
+    eval {require Term::ReadLine} ? do {
+	my $rl = Term::ReadLine->new('USGS Elevation query');
+	sub {$rl->readline($_[0])}
+    } : sub {print $_[0]; <STDIN>} : sub {<STDIN>};
+
+# If interactive, print a banner
+
+-t STDIN and print <<eod;
+
+Simple Geo::WebService::Elevation::USGS client
+Enter 'help' for help
+
+eod
+
+# We need a Geo::WebService::Elevation::USGS object.
+
+my $ele = Geo::WebService::Elevation::USGS->new();
+
+# While we have input ...
+
+while (defined ($_ = $read->($prompt))) {
+
+    # Normalize the input and bypass it if it is an empty line or a
+    # comment.
+
+    chomp;
+    s/^\s+//;
+    s/\s+$//;
+    $_ or next;
+    substr($_, 0, 1) eq '#' and next;
+
+    # Split the line into a method name and arguments.
+
+    my ($method, @args) = split '\s+', $_;
+    my $rslt;
+    my $start;
+    if ($method eq 'time') {
+	$method = shift @args;
+	$start = time();
+    }
+
+    # Dispatch the command to our own subroutine if there is one, or the
+    # same-named Geo::WebService::Elevation::USGS method otherwise.
+
+    if (my $code = __PACKAGE__->can('cmd_' . $method)) {
+	$rslt = eval {$code->(@args)};
+    } else {
+	$rslt = eval {$ele->$method(@args)};
+    }
+    if ($start) {
+	warn "Elapsed time: ", time() - $start, " seconds\n";
+    }
+
+    # If we flunked, display the error message. Otherwise if we got a
+    # result and it's just our object again, print it. 
+
+    if ($@) {
+	warn $@;
+    } elsif (defined $rslt && !eval
+	{$rslt->isa('Geo::WebService::Elevation::USGS')}) {
+	print $dumper->($rslt);
+    }
+}
+
+# End of input. Print a newline for neatness, and fall off the end of
+# the script.
+
+print "\n";
+
+# The exit command.
+
+sub cmd_exit {
+    print "\n";
+    exit;
+}
+
+# The help command displays very brief help.
+
+sub cmd_help {
+    <<eod;
+
+Possible commands:
+
+attributes - list names and values of all
+    Geo::WebService::Elevation::USGS attributes;
+exit - terminate this script (end-of-file also works);
+get name - display the value of the named attribute;
+getAllElevations lat lon - get all available elevation
+    values for the given latitude and longitude;
+getElevation lat lon - get the 'best' elevation value
+    for the given latitude and longitude;
+help - display this text;
+new - create a new Geo::WebService::Elevation::USGS object;
+set name value - Set the named attribute to the given
+    value;
+sources - set source attribute to array of arguments.
+
+South latitudes and west longitudes are negative.
+
+eod
+}
+
+
+# The 'new' command wraps the Geo::WebService::Elevation::USGS 'new', nabs the new
+# object, and puts it where we can find it.
+
+sub cmd_new {
+    $ele = Geo::WebService::Elevation::USGS->new(@_);
+}
+
+# The 'sources' command sets the source attribute to a reference to the
+# array of its arguments (which may be empty).
+
+sub cmd_sources {
+    $ele->set(source => [@_]);
+}
