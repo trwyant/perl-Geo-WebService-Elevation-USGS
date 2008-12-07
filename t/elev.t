@@ -26,7 +26,7 @@ my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(places => 2)},
 	"Unable to access $pxy");
 }
 
-plan ('no_plan');
+plan (tests => 117);
 
 my $rslt = eval {$ele->getElevation(38.898748, -77.037684)};
 ok($rslt, 'getElevation returned a result');
@@ -303,6 +303,7 @@ is($rslt->[0]{Units}, 'METERS', 'Elevation is in meters');
 is($rslt->[0]{Elevation}, '16.67', 'Elevation is 16.67');
 
 sub _skip_it {
+    @_ > 1 or unshift @_, undef;  # Because eval{} returns () in list context.
     my ($check, $reason) = @_;
     unless ($check) {
 	plan (skip_all => $reason);
