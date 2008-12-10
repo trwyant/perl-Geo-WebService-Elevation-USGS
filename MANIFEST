@@ -1,5 +1,5 @@
-Changes
 Build.PL
+Changes
 eg/README
 eg/usgs_ele
 lib/Geo/WebService/Elevation/USGS.pm
