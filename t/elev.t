@@ -26,7 +26,7 @@ my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(places => 2)},
 	"Unable to access $pxy");
 }
 
-plan (tests => 117);
+plan (tests => 118);
 
 my $rslt = eval {$ele->getElevation(38.898748, -77.037684)};
 ok($rslt, 'getElevation returned a result');
@@ -87,6 +87,8 @@ $ele->set(
     use_all_limit => 0,
 );
 $rslt = eval {$ele->elevation(38.898748, -77.037684)};
+ok(!$@, 'elevation() done by iteration succeeds')
+    or diag($@);
 is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
 cmp_ok(eval{@$rslt}, '==', 3, 'elevation() returned three results');
 ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
@@ -256,7 +258,9 @@ is($rslt->[0]{Elevation}, '16.67', 'Elevation is 16.67');
 eval {$ele->set(source => \*STDOUT)};
 like($@, qr{^Attribute source may not be a GLOB ref},
     'Can not set source as a glob ref');
+# NOTE that direct modification of object attributes like this is UNSUPPORTED.
 $ele->{source} = \*STDOUT;	# Bypass validation
+delete $ele->{_source_cache};	# Clear cache
 $rslt = eval {[$ele->elevation(38.898748, -77.037684)]};
 like($@, qr{^Source GLOB ref not understood},
     'Bogus source reference gets caught in use');
