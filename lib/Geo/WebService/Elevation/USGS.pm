@@ -24,11 +24,36 @@ an error by an undef response, with the error retrievable from the
 For documentation on the underlying web service, see
 L<http://gisdata.usgs.gov/XMLWebServices/TNM_Elevation_Service.php>.
 
-B<Caveat:> This module relies on the documented documented behavior of
-the above-referred-to USGS web service, as well as certain undocumented
-but observed behaviors and the proper functioning of the USGS' hardware
-and software and the network connecting you to them. Changes or failures
-in any of these will probably cause this module not to work.
+B<Caveat:> This module relies on the documented behavior of the
+above-referred-to USGS web service, as well as certain undocumented but
+observed behaviors and the proper functioning of the USGS' hardware and
+software and the network connecting you to them. Changes or failures in
+any of these will probably cause this module not to work.
+
+I have not (I think) gone out of my way to use undocumented behavior,
+but there are a couple cases where I felt forced into it.
+
+First, the documentation says that if a point is not in a requested
+source data set, the returned elevation will be -1.79769313486231E+308.
+In practice, the getAllElevations web service returns 'BAD_EXTENT' in
+this case, and the getElevation web service returns an error on the
+attempt to convert 'BAD_EXTENT' to a number. This affects the behavior
+of the is_valid() method, but more importantly it convinced me to try to
+convert the getElevation web service error back into a successful call
+of the getElevation() method, returning 'BAD_EXTENT' as the elevation.
+
+Second, experimentation shows that, although the source IDs are
+generally documented as upper-case, in fact the getElevation web service
+queries are not sensitive to the case of the provided source ID. Because
+of this, this package normalizes source IDs (by converting them to upper
+case) before using them in a comparison. This affects the behavior of
+the elevation() method when the 'source' attribute is an array or hash
+reference and the source is being used to select results from a
+getAllElevations query. It also affects the construction of the
+'BAD_EXTENT' packet in response to a getElevation web service failure,
+since the source name is obtained by making a call to getAllElevations()
+(or the cached results of such a call) and finding the name
+corresponding to the given source ID.
 
 =head2 Methods
 
@@ -45,11 +70,11 @@ use Carp;
 use Scalar::Util qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.000_03';
+our $VERSION = '0.001';
 
 use constant BEST_DATA_SET => -1;
 
-=head3 $eq = Geo::WebService::Elevation::USGS->new(...)
+=head3 $eq = Geo::WebService::Elevation::USGS->new();
 
 This method instantiates a query object. If any arguments are given,
 they are passed to the set() method. The instantiated object is
@@ -89,7 +114,7 @@ my %mutator = (
     timeout	=> \&_set_integer_or_undef,
     trace	=> \&_set_literal,
     units	=> \&_set_literal,
-    use_all_limit => \&_set_integer,
+    use_all_limit => \&_set_use_all_limit,
 );
 
 =head3 %values = $eq->attributes();
@@ -109,11 +134,11 @@ sub attributes {
 
 =head3 $rslt = $usgs->elevation($lat, $lon, $valid);
 
-This method queries the data sets defined in the 'source' attribute at
-the given latitude and longitude, returning the result in the given array
-reference. If called in list context the array itself is returned. The
-returned array contains hashes identical to that returned by
-getElevation().
+This method queries the data sets defined in the 'source' attribute for
+the elevation at the given latitude and longitude, returning the results
+in the given array reference. If called in list context the array itself
+is returned. The returned array contains hashes identical to that
+returned by getElevation().
 
 You can also pass a Geo::Point, GPS::Point, or Net::GPSD::Point object
 in lieu of the $lat and $lon arguments. If you do this, $valid becomes
@@ -128,31 +153,42 @@ If the 'source' is any other scalar, getElevation() is called to get the
 named data set. The result is an array (or array reference) whose sole
 element is the hash returned by GetElevation().  The USGS code handling
 this request seems to be badly behaved if the requested data set does
-not cover the given position.
+not cover the given position, but this package attempts to deal with
+this by turning their error into a successful return with elevation
+'BAD_EXTENT'.
 
-If the 'source' is a reference to an empty list or an empty hash,
+If the 'source' is a reference to an empty array or an empty hash,
 getAllElevations() is called, and its output (or a reference to it) is
 returned.
 
-If the 'source' is a reference to a non-empty hash with more entries
-than the value of the 'use_all_limit' attribute, getAllElevations() is
-called, and items whose Data_ID does not appear in the hash are
-eliminated from its output. If the 'source' hash does not have more
-entries than the value of the 'use_all_limit' attribute,
-getAllElevations() is called once for each key, in alphabetical order.
-Either way, the resultant array (or a reference to it) is returned. It
-is a fatal error if any of the hash keys does not appear in the output
-of getAllElevations().
+If the 'source' is a reference to a non-empty array with at least as
+many entries as the value of the 'use_all_limit' attribute, B<and> none
+of the entries begins with a '*' (what the USGS calls 'best available
+subset' syntax) it is made into a hash by using the contents of the
+array as keys and 1 as the value for all keys. Then getAllElevations()
+is called, and the array (or a reference to it) of all source data sets
+whose Source_ID values appear in the hash are returned. An error will be
+declared if there are any source IDs specified in the array which are
+not returned by getAllElevations().
 
-If the 'source' is a reference to a non-empty array with more entries
-than the value of the 'use_all_limit' attribute, it is made into a hash
-by using the contents of the array as keys and 1 as the value for all
-keys. Otherwise it is used as-is. Subsequent processing is the same as
-when 'source' is a reference to a non-empty hash.
+If the 'source' is a reference to a non-empty array and none of the
+other conditions of the previous paragraph apply, getElevation() is
+called for each element of the array, and the array of all results (or a
+reference to it) is returned.
 
-B<Note> that getAllElevations() and getElevation() behave differently
-when a data set does not cover the position given. getAllElevations()
-returns an invalid value, whereas getElevation() returns an error.
+B<Please note> that the use of wildcard source IDs (either the magic
+'-1' or anything beginning with '*') in an array (or hash, see below) is
+not supported. Users will find that the current behavior is to error
+out with an invalid source name if the query is directed to
+getAllElevations. If the query gets handled by iterating with
+getElevation(), it succeeds or errors out under the same conditions that
+the getElevation() method would. But I make no commitment to retain this
+functionality. Instead, I hope that use of the module will clarify what
+its behavior should be.
+
+If the 'source' is a reference to a non-empty hash, it is handled pretty
+much as though the 'source' were a reference to an array containing the
+sorted keys of the hash.
 
 If the 'source' is a reference to a regular expression,
 getAllElevations() is called, and items whose Data_ID does not match the
@@ -161,8 +197,8 @@ regular expression are eliminated from its output. The resultant array
 
 If the 'source' is a reference to code, getAllElevations() is called.
 For each item in the returned array, the code is called, with the
-Geo::WebService::Elevation::USGS object as the first argument, and the array item
-(which, remember, is a hash reference like that returned by
+Geo::WebService::Elevation::USGS object as the first argument, and the
+array item (which, remember, is a hash reference like that returned by
 getElevation()) as the second argument. If the code returns true the
 item is included in the output; if the code returns false the item is
 excluded. The resultant array (or a reference to it) is returned.
@@ -176,9 +212,9 @@ therefore has the same result as
 
  $ele->set(source => qr{CONUS}i);
 
-If the optional $valid argument is specified, data with invalid
-elevations are eliminated before the array is returned. Note that this
-may result in an empty array.
+If the optional $valid argument to elevation() is specified, data with
+invalid elevations are eliminated before the array is returned. Note
+that this may result in an empty array.
 
 =cut
 
@@ -352,20 +388,25 @@ non-numeric value (e.g. 'BAD_EXTENT', though this is nowhere documented
 that I can find), or a very large negative number (documented as
 -1.79769313486231E+308).
 
-B<Caveat:> If you have not specified a data source, and no data source
-covers the point you have specified, an error will occur. This will be
-thrown as an exception if the 'carp' attribute is true; otherwise undef
-will be returned and the error will be in the 'error' attribute.
-
-B<Another caveat:> The USGS web service upon which this code is based
-throws a type conversion error ("... System.InvalidCastException:
-Conversion from string "BAD_EXTENT" to type 'Double' is not valid. ...)
-if an explicit source was requested and the latitude and longitude are
-not in that source. This code attempts to trap this error and return a
-hash with Elevation => 'BAD_EXTENT', the way getAllElevations does. If
-the behavior of the USGS web service changes, the change may be visible
-to users of this software, either as an error, as an unexpected value in
+B<Caveat:> The USGS web service upon which this code is based throws a
+type conversion error ("... System.InvalidCastException: Conversion from
+string "BAD_EXTENT" to type 'Double' is not valid. ...") if an explicit
+source was requested and the latitude and longitude are not in that
+source. This code attempts to trap this error and return a hash with
+Elevation => 'BAD_EXTENT', the way getAllElevations does, on the
+presumption that this is what the USGS code was trying to do. If the
+behavior of the USGS web service changes, the change may be visible to
+users of this software, either as an error, as an unexpected value in
 the 'Elevation' key, or some other way.
+
+B<Another caveat:> If you have not specified a data source (or if you
+have specified a 'wildcard' data source such as '-1' or anything
+beginning with '*'), and no data source covers the point you have
+specified, an error will occur. This will be thrown as an exception if
+the 'carp' attribute is true; otherwise undef will be returned and the
+error will be in the 'error' attribute. This seems inconsistent with the
+behavior of the previous C<caveat>, but it is also unclear what to do
+about it.
 
 =cut
 
@@ -396,15 +437,16 @@ sub getElevation {
     if (!$@ && $rslt->fault && $rslt->faultstring =~
 	m/Conversion from string "BAD_EXTENT" to type 'Double'/) {
 	$self->set(error => $@);
+	my $src = _normalize_id($source);
 	return {
-	    Data_Source => $self->_get_source_name($source),
-	    Data_ID	=> uc $source,
+	    Data_Source => $self->_get_source_name($src),
+	    Data_ID	=> $src,
 	    Elevation	=> 'BAD_EXTENT',
 	    Units	=> $self->{units},
 	};
     }
 
-    return $self->_digest($rslt);
+    return $self->_digest($rslt, $source);
 }
 
 =head3 $boolean = $eq->is_valid($elevation);
@@ -412,7 +454,7 @@ sub getElevation {
 This method (which can also be called as a static method or as a
 subroutine) returns true if the given datum represents a valid
 elevation, and false otherwise. A valid elevation is a number having a
-value greater than -1e-300. The input can be either an elevation value
+value greater than -1e+300. The input can be either an elevation value
 or a hash whose {Elevation} key supplies the elevation value.
 
 =cut
@@ -445,17 +487,17 @@ sub set {
 sub _set_integer {
     !defined $_[2] || $_[2] !~ m/^[-+]?\d+$/
 	and croak "Attribute $_[1] must be an integer";
-    $_[0]->{$_[1]} = $_[2] + 0;
+    $_[0]{$_[1]} = $_[2] + 0;
 }
 
 sub _set_integer_or_undef {
     defined $_[2] && $_[2] !~ m/^\d+$/
 	and croak "Attribute $_[1] must be an unsigned integer or undef";
-    $_[0]->{$_[1]} = $_[2];
+    $_[0]{$_[1]} = $_[2];
 }
 
 sub _set_literal {
-    $_[0]->{$_[1]} = $_[2];
+    $_[0]{$_[1]} = $_[2];
 }
 
 {
@@ -464,8 +506,14 @@ sub _set_literal {
 	my $ref = ref $_[2];
 	$ref && !$supported{$ref}
 	    and croak "Attribute $_[1] may not be a $ref ref";
-	$_[0]->{$_[1]} = $_[2];
+	delete $_[0]{_source_cache};
+	$_[0]{$_[1]} = $_[2];
     }
+}
+
+sub _set_use_all_limit {
+    _set_integer(@_);
+    delete $_[0]{_source_cache};
 }
 
 ########################################################################
@@ -474,7 +522,7 @@ sub _set_literal {
 #
 #	The author reserves the right to change these without notice.
 
-#	$rslt = $ele->_digest($rslt);
+#	$rslt = $ele->_digest($rslt, $source);
 #
 #	This method takes the results of an elevation query and turns
 #	them into the desired hash. If an error occurred, it is recorded
@@ -482,9 +530,13 @@ sub _set_literal {
 #	'croak' is true) or undef is returned (otherwise). If no error
 #	occurred, we burrow down into the SOAP response, find the actual
 #	query results, and return that.
+#
+#	The optional $source argument, if defined, is appended to any
+#	error reported in the SOAP packet in lieu of the actual data
+#	(i.e. when the no SOAP error was reported).
 
 sub _digest {
-    my ($self, $rslt) = @_;
+    my ($self, $rslt, $source) = @_;
     if ($self->{error} = $@) {
 	$self->{croak} and croak $self->{error};
 	return;
@@ -526,7 +578,9 @@ sub _digest {
 	    $rslt = $rslt->{$key};
 	}
 	unless (ref $rslt) {
-	    $self->{error} = $rslt;
+	    $rslt =~ m/[.?!]$/ or $rslt .= '.';
+	    $self->{error} = defined $source ?
+		"$rslt Source = '$source'" : $rslt;
 	}
     } else {
 	$self->{error} = "No data found in SOAP result";
@@ -573,35 +627,73 @@ sub _digest {
 #	reference to the duplicate.
 #
 #	If the source is anything else, we return it.
+#
+#	Note that because the actual computation is fairly complex, I
+#	have decided to try to compute (when needed) and cache a
+#	subroutine that returns the desired source when called. Any
+#	attribute mutators which would (or might) cause the desired code
+#	to change should clear the cache. Inside the comments is the
+#	original code.
+
+=begin comment
 
 sub _get_source {
     my ($self) = @_;
-    my $source = $self->{source};
-    my $ref = ref $source;
-    defined $source or return BEST_DATA_SET;
-    $ref or return $source;
+    defined (my $source = $self->{source})
+	or return BEST_DATA_SET;
+    my $ref = ref $source
+	or return $source;
     if ($ref eq 'ARRAY') {
-	my $size = @$source or return {};
-	my $limit = $self->get('use_all_limit');
-	$limit >= 0 && $size >= $limit
-	    and return {map {$_ => 1} @$source};
-	return $source;
     } elsif ($ref eq 'HASH') {
-	%$source or return {};
-	my $size = scalar keys %$source;
-	my $limit = $self->get('use_all_limit');
-	$limit >= 0 && $size >= $limit
-	    and return {%$source};
-	return [sort keys %$source];
+	$source = [sort keys %$source];
     } else {
 	return $source;
     }
+    @$source or return {};
+    my $limit = $self->get('use_all_limit');
+####    $limit < 0 || @$source < $limit || grep m/^\*/i, @$source
+    $limit < 0 || @$source < $limit
+	and return $source;
+    return {map {$_ => 1} @$source};
+}
+
+=end comment
+
+=cut
+
+sub _get_source {
+    ($_[0]{_source_cache} ||= _get_source_cache(@_))->();
+}
+
+sub _get_source_cache {
+    my ($self) = @_;
+    defined (my $source = $self->{source})
+	or return \&BEST_DATA_SET;
+    my $ref = ref $source
+	or return sub {$source};
+    if ($ref eq 'ARRAY') {
+    } elsif ($ref eq 'HASH') {
+	$source = [sort keys %$source];
+    } else {
+	return sub {$source};
+    }
+    @$source or return sub {{}};
+    my $limit = $self->get('use_all_limit');
+####    $limit < 0 || @$source < $limit || grep m/^\*/i, @$source
+    $limit < 0 || @$source < $limit
+	and return sub {$source};
+    $source = [map _normalize_id($_), @$source];
+    return sub {
+	my %src = map {$_ => 1} @$source;
+	return \%src;
+    };
 }
 
 #	$name = $self->_get_source_name($data_id);
 #
 #	This subroutine returns the data source name for the given
-#	Data_ID.
+#	Data_ID. The input id is expected to have already been
+#	normalized.
 
 {
     my %name;
@@ -610,10 +702,11 @@ sub _get_source {
 	my ($self, $id) = @_;
 	unless (%name) {
 	    foreach my $data (@{$self->getAllElevations(40, -90)}) {
-		$name{uc $data->{Data_ID}} = $data->{Data_Source};
+		$name{_normalize_id($data->{Data_ID})} =
+		    $data->{Data_Source};
 	    }
 	}
-	$name{uc $id};
+	$name{$id};
     }
 }
 
@@ -646,6 +739,13 @@ sub _get_source {
 	return ($self, @_);
     }
 }
+
+#	$id = _normalize_id($id)
+#
+#	This subroutine normalizes a Source_ID by uppercasing it. It
+#	exists to centralize this operation.
+
+sub _normalize_id {uc $_[0]}
 
 #	$soap_object = _soapdish ()
 
@@ -736,11 +836,15 @@ track the change.
 The default is
 'http://gisdata.usgs.gov/xmlwebservices2/elevation_service.asmx'.
 
-=head3 source (string)
+=head3 source
 
 This attribute specifies the ID of the source layer to be queried by
-getElevation(). Valid layer IDs are documented at
+the elevation() method. Valid layer IDs are documented at
 L<http://gisdata.usgs.gov/XMLWebServices/TNM_Elevation_Service_Methods.php>.
+
+A legal value is a scalar, or an ARRAY, CODE, HASH, or Regexp reference.
+Please see the elevation() method's documentation for how these are
+used.
 
 The default is '-1', which requests a response from the 'best' data
 source for the given point.
@@ -769,19 +873,19 @@ which is documented as the default.
 
 The default is 'FEET'.
 
-=head3 use_all_limit (integer or undef)
+=head3 use_all_limit (integer)
 
 This attribute is used to optimize the behavior of the elevation()
 method when the 'source' attribute is an array or hash reference. If the
 number of elements in the array or hash is greater than or equal to this,
 elevation() gets its data by calling getAllElevations() and then
-dropping unwanted data. If the number of elements is less than or equal
+dropping unwanted data. If the number of elements is less than
 this number, elevation() iterates over the elements of the array or the
 sorted keys of the hash, calling getElevation() on each.
 
 Note that setting this to 0 causes getAllElevations() to be used always.
 Setting this to -1 (or any negative number) is special-cased to cause
-getElevations() to be used whenever the 'source' array or hash has any
+getElevation() to be used whenever the 'source' array or hash has any
 entries at all, no matter how many it has.
 
 The default is 5, which was chosen based on timings of the two methods.
@@ -795,7 +899,7 @@ L<http://rt.cpan.org/>.
 
 =head1 AUTHOR
 
-Thomas R. Wyant, III F<wyant at cpan dot org>
+Thomas R. Wyant, III; F<wyant at cpan dot org>
 
 =head1 COPYRIGHT
 
@@ -805,6 +909,6 @@ Copyright 2008 by Thomas R. Wyant, III. All rights reserved.
 
 This module is free software; you can use it, redistribute it and/or
 modify it under the same terms as Perl itself. Please see
-L<http://perldoc.perl.org/index-license.html> for the current licenses.
+L<http://perldoc.perl.org/index-licence.html> for the current licenses.
 
 =cut
