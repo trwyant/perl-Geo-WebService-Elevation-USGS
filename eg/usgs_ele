@@ -22,16 +22,20 @@ my $dumper = eval {
 # If interactive, input is by Term::ReadLine if available, or a simple
 # subroutine otherwise. If not interactive, we just read STDIN.
 
+# Perl::Critic says you should use IO::Interactive here. But this is
+# supposed to be a lightweight example, so I will just note the
+# objection and move on.
+my $interactive = -t STDIN;	## no critic
 my $prompt = 'usgs_ele> ';
-my $read = -t STDIN ?
+my $read = $interactive ?
     eval {require Term::ReadLine} ? do {
 	my $rl = Term::ReadLine->new('USGS Elevation query');
 	sub {$rl->readline($_[0])}
-    } : sub {print $_[0]; <STDIN>} : sub {<STDIN>};
+    } : sub {print STDERR $_[0]; <STDIN>} : sub {<STDIN>};
 
 # If interactive, print a banner
 
--t STDIN and print <<eod;
+$interactive and warn <<eod;
 
 Simple Geo::WebService::Elevation::USGS client
 Enter 'help' for help
