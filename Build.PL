@@ -3,13 +3,14 @@ use 5.008;
 use strict;
 use warnings;
 
-use Module::Build;
+use Module::Build 0.28;	# for meta_merge
 
 my $bldr = Module::Build->new (
     dist_author => 'Tom Wyant (wyant at cpan dot org)',
     dist_abstract => 'Get elevation data from the USGS',
     module_name => 'Geo::WebService::Elevation::USGS',
     build_requires => {
+	'Module::Build' => 0.28,
 	'Test::More' => 0.40,
     },
     requires => {
