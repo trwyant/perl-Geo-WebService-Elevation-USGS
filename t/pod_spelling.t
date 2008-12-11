@@ -22,6 +22,7 @@ USGS
 WGS
 WSDL
 Wyant
+geo
 getAllElevations
 getElevation
 targetNamespace
