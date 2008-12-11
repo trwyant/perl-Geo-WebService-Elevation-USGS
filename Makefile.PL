@@ -22,7 +22,7 @@ WriteMakefile (
 	(
 	    META_MERGE => {
 		build_requires => {
-		    'Test::More' => 0,
+		    'Test::More' => 0.40,
 		},
 		resources => {
 		    license => 'http://dev.perl.org/licenses/',

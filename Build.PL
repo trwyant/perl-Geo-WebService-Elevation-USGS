@@ -10,7 +10,7 @@ my $bldr = Module::Build->new (
     dist_abstract => 'Get elevation data from the USGS',
     module_name => 'Geo::WebService::Elevation::USGS',
     build_requires => {
-	'Test::More' => 0,
+	'Test::More' => 0.40,
     },
     requires => {
 	'SOAP::Lite' => 0,
