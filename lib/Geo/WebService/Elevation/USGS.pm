@@ -70,7 +70,7 @@ use Carp;
 use Scalar::Util qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.001';
+our $VERSION = '0.001_01';
 
 use constant BEST_DATA_SET => -1;
 
@@ -460,8 +460,14 @@ or a hash whose {Elevation} key supplies the elevation value.
 =cut
 
 sub is_valid {
-    my $ele = ref $_[-1] eq 'HASH' ? $_[-1]{Elevation} : $_[-1];
-    looks_like_number($ele) && $ele > -1e+300;
+    my $ele = pop @_;
+    my $ref = ref $ele;
+    if ($ref eq 'HASH') {
+	$ele = $ele->{Elevation};
+    } elsif ($ref) {
+	croak "$ref reference not understood";
+    }
+    return looks_like_number($ele) && $ele > -1e+300;
 }
 
 =head3 $eq = $eq->set($attribute => $value ...);
