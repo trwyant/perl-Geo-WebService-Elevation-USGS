@@ -70,7 +70,7 @@ use Carp;
 use Scalar::Util qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.001_01';
+our $VERSION = '0.001_02';
 
 use constant BEST_DATA_SET => -1;
 
@@ -895,6 +895,17 @@ getElevation() to be used whenever the 'source' array or hash has any
 entries at all, no matter how many it has.
 
 The default is 5, which was chosen based on timings of the two methods.
+
+=head1 ACKNOWLEDGMENTS
+
+The author wishes to acknowledge the following individuals and groups.
+
+The members of the geo-perl mailing list provided valuable suggestions
+and feedback, and generally helped me thrash through such issues as how
+the module should work and what it should actually be called.
+
+Michael R. Davis provided prompt and helpful feedback on a testing
+problem in my first module to rely heavily on Test::More.
 
 =head1 BUGS
 
