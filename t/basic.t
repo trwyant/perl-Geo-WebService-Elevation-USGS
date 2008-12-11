@@ -1,14 +1,15 @@
 use strict;
 use warnings;
 
-use Test::More tests => 37;
+use Test::More tests => 48;
 
 my $module = 'Geo::WebService::Elevation::USGS';
 
 require_ok($module)
     or BAIL_OUT ("Can not continue without loading $module");
 
-my $ele = new_ok('Geo::WebService::Elevation::USGS')
+my $ele = eval {$module->new()};
+isa_ok($ele, $module)
     or BAIL_OUT ("Can not continue without instantiating $module");
 
 is($ele->get('units'), 'FEET', 'Units default to feet');
@@ -80,3 +81,22 @@ eval {$ele->set(use_all_limit => 5)};	# for subsequent testing
     ok(!exists $rslt{_bogus},
 	"'_bogus' should not appear in attributes() output");
 }
+
+$rslt = eval {$module->is_valid(0)};
+ok(!$@, 'is_valid(0) should succeed');
+ok($rslt, 'is_valid(0) should be true');
+$rslt = eval {$module->is_valid('bogus')};
+ok(!$@, 'is_valid(\'bogus\') should succeed');
+ok(!$rslt, 'is_valid(\'bogus\') should be false');
+$rslt = eval {$module->is_valid(undef)};
+ok(!$@, 'is_valid(undef) should succeed');
+ok(!$rslt, 'is_valid(undef) should be false');
+$rslt = eval {$module->is_valid(-1e310)};
+ok(!$@, 'is_valid(-1e310) should succeed');
+ok(!$rslt, 'is_valid(-1e310) should be false');
+$rslt = eval {$ele->is_valid({Elevation => 0})};
+ok(!$@, 'is_valid({Elevation => 0}) should succeed');
+ok($rslt, 'is_valid({Elevation => 0}) should be true');
+$rslt = eval {$ele->is_valid([])};
+like ($@, qr{^ARRAY reference not understood},
+    'is_valid() should croak when passed an array reference');
