@@ -1,2 +1,12 @@
 0.001
   Initial release
+0.002
+  Make is_valid() croak if not passed a scalar or hash ref.
+  Require Test::More 0.40 (rather than 0) and recode tests
+    to conform to this.
+  Log all net errors encountered during tests, to try to
+    diagnose test failures.
+  Recode Build.PL to configure the use of Module::Build to
+    the version present.
+  Recode Makefile.PL in a manner corresponding to Build.PL.
+  Add t/executable.t and t/manifest.t to the distribution.
