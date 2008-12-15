@@ -3,6 +3,11 @@ use warnings;
 
 use Test;
 
+unless ($ENV{TEST_AUTHOR}) {
+    print "1..0 # skip Environment variable TEST_AUTHOR not set.\n";
+    exit;
+}
+
 eval {
     require ExtUtils::Manifest;
     ExtUtils::Manifest->import (qw{manicheck filecheck});

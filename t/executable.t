@@ -4,6 +4,11 @@ use warnings;
 use ExtUtils::Manifest qw{maniread};
 use Test;
 
+unless ($ENV{TEST_AUTHOR}) {
+    print "1..0 # skip Environment variable TEST_AUTHOR not set.\n";
+    exit;
+}
+
 my $manifest = maniread ();
 
 my @check;

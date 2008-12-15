@@ -4,6 +4,10 @@ use warnings;
 use File::Spec;
 
 BEGIN {
+##    unless ($ENV{TEST_AUTHOR}) {
+##	print "1..0 # skip Environment variable TEST_AUTHOR not set.\n";
+##	exit;
+##    }
     eval {
 	require Test::More;
 	Test::More->VERSION(0.40);
