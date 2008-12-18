@@ -28,102 +28,143 @@ my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(places => 2)},
 
 plan (tests => 133);
 
-my $rslt = eval {$ele->getElevation(38.898748, -77.037684)};
-ok(!$@, 'getElevation succeeded') or diag($@);
-ok($rslt, 'getElevation returned a result');
-is(ref $rslt, 'HASH', 'getElevation returned a hash');
-is($rslt->{Data_ID}, 'NED.CONUS_NED_13E', 'Data came from NED.CONUS_NED_13E');
-is($rslt->{Units}, 'FEET', 'Elevation is in feet');
-is($rslt->{Elevation}, '54.70', 'Elevation is 54.70');
-$rslt = eval {$ele->getElevation(38.898748, -77.037684, undef, 1)};
-ok(!$@, 'getElevation (only) succeeded') or diag($@);
-is($rslt, '54.70', 'getElevation (only) returned 54.70');
-$rslt = eval {$ele->elevation(38.898748, -77.037684)};
-ok(!$@, 'elevation() succeeded') or diag($@);
-is(ref $rslt, 'ARRAY', 'elevation() returned an array');
-ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
-cmp_ok(scalar @$rslt, '==', 1, 'elevation() returned a single result');
-is(ref ($rslt->[0]), 'HASH', 'elevation\'s only result was a hash');
-is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
-    'Data came from NED.CONUS_NED_13E');
-is($rslt->[0]{Units}, 'FEET', 'Elevation is in feet');
-is($rslt->[0]{Elevation}, '54.70', 'Elevation is 54.70');
-$rslt = eval {
-    $ele->getElevation(38.898748, -77.037684, 'SRTM.SA_3_ELEVATION', 1)};
-ok(!$@, 'getElevation does not fail when data has bad extent')
-    or diag($@);
-ok(!$ele->is_valid($rslt->{Elevation}),
-    'getElevation does not return a valid elevation when given a bad extent');
+my $rslt;
+
+SKIP: {
+    $rslt = eval {$ele->getElevation(38.898748, -77.037684)};
+    _skip_on_server_error($ele, 6);
+    ok(!$@, 'getElevation succeeded') or diag($@);
+    ok($rslt, 'getElevation returned a result');
+    is(ref $rslt, 'HASH', 'getElevation returned a hash');
+    is($rslt->{Data_ID}, 'NED.CONUS_NED_13E',
+	'Data came from NED.CONUS_NED_13E');
+    is($rslt->{Units}, 'FEET', 'Elevation is in feet');
+    is($rslt->{Elevation}, '54.70', 'Elevation is 54.70');
+}
+
+SKIP: {
+    $rslt = eval {$ele->getElevation(38.898748, -77.037684, undef, 1)};
+    _skip_on_server_error($ele, 2);
+    ok(!$@, 'getElevation (only) succeeded') or diag($@);
+    is($rslt, '54.70', 'getElevation (only) returned 54.70');
+}
+
+SKIP: {
+    $rslt = eval {$ele->elevation(38.898748, -77.037684)};
+    _skip_on_server_error($ele, 7);
+    ok(!$@, 'elevation() succeeded') or diag($@);
+    is(ref $rslt, 'ARRAY', 'elevation() returned an array');
+    ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
+    cmp_ok(scalar @$rslt, '==', 1, 'elevation() returned a single result');
+    is(ref ($rslt->[0]), 'HASH', 'elevation\'s only result was a hash');
+    is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
+	'Data came from NED.CONUS_NED_13E');
+    is($rslt->[0]{Units}, 'FEET', 'Elevation is in feet');
+    is($rslt->[0]{Elevation}, '54.70', 'Elevation is 54.70');
+}
+
+SKIP: {
+    $rslt = eval {
+	$ele->getElevation(38.898748, -77.037684, 'SRTM.SA_3_ELEVATION', 1)};
+    _skip_on_server_error($ele, 2);
+    ok(!$@, 'getElevation does not fail when data has bad extent')
+	or diag($@);
+    ok(!$ele->is_valid($rslt->{Elevation}),
+	'getElevation does not return a valid elevation when given a bad extent');
+}
 $ele->set(source => []);
 is(ref ($ele->get('source')), 'ARRAY', 'Source can be set to an array ref');
-$rslt = eval {$ele->elevation(38.898748, -77.037684)};
-ok(!$@, 'elevation() still succeeds') or diag($@);
-is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
-ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
-cmp_ok(scalar @$rslt, '>', 1, 'elevation() returned multiple results');
-ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
-$rslt = {map {$_->{Data_ID} => $_} @$rslt};
-ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
-is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
-is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
+
+SKIP: {
+    $rslt = eval {$ele->elevation(38.898748, -77.037684)};
+    _skip_on_server_error($ele, 7);
+    ok(!$@, 'elevation() still succeeds') or diag($@);
+    is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
+    ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
+    cmp_ok(scalar @$rslt, '>', 1, 'elevation() returned multiple results');
+    ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
+    $rslt = {map {$_->{Data_ID} => $_} @$rslt};
+    ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
+    is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
+    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
+}
+
 $ele->set(source => {});
 is(ref ($ele->get('source')), 'HASH', 'Source can be set to a hash ref');
-$rslt = eval {$ele->elevation(38.898748, -77.037684)};
-ok(!$@, 'elevation() with hash source still succeeds') or diag($@);
-is(ref $rslt, 'ARRAY', 'elevation() with hash source still returns an array');
-ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
-cmp_ok(scalar @$rslt, '>', 1, 'elevation() returned multiple results');
-ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
-$rslt = {map {$_->{Data_ID} => $_} @$rslt};
-ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
-is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
-is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
-$ele->set(
-    source => ['NED.CONUS_NED_13E', 'NED.CONUS_NED'],
-    use_all_limit => 5,
-);
-$rslt = eval {$ele->elevation(38.898748, -77.037684)};
-ok(!$@, 'elevation() still succeeds') or diag($@);
-is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
-ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
-cmp_ok(scalar @$rslt, '==', 2, 'elevation() returned two results');
-ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
-$rslt = {map {$_->{Data_ID} => $_} @$rslt};
-ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
-is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
-is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
 
-$ele->set(
-    source => ['NED.CONUS_NED_13E', 'NED.CONUS_NED', 'SRTM.SA_3_ELEVATION'],
-    use_all_limit => 0,
-);
-$rslt = eval {$ele->elevation(38.898748, -77.037684)};
-ok(!$@, 'elevation() done by iteration succeeds') or diag($@);
-is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
-ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
-cmp_ok(scalar @$rslt, '==', 3, 'elevation() returned three results');
-ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
-$rslt = {map {$_->{Data_ID} => $_} @$rslt};
-ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
-is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
-is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
-$rslt = eval {$ele->elevation(38.898748, -77.037684, 1)};
-ok(!$@, 'elevation(valid) succeeds') or diag($@);
-is(ref $rslt, 'ARRAY', 'elevation(valid) still returns an array');
-ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
-cmp_ok(scalar @$rslt, '==', 2, 'elevation(valid) returned two results')
-    or warn "\$@ = $@";
-ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
-$rslt = {map {$_->{Data_ID} => $_} @$rslt};
-ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
-is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
-is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
+SKIP: {
+    $rslt = eval {$ele->elevation(38.898748, -77.037684)};
+    _skip_on_server_error($ele, 7);
+    ok(!$@, 'elevation() with hash source still succeeds') or diag($@);
+    is(ref $rslt, 'ARRAY',
+	'elevation() with hash source still returns an array');
+    ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
+    cmp_ok(scalar @$rslt, '>', 1, 'elevation() returned multiple results');
+    ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
+    $rslt = {map {$_->{Data_ID} => $_} @$rslt};
+    ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
+    is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
+    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
+}
+
+SKIP: {
+    $ele->set(
+	source => ['NED.CONUS_NED_13E', 'NED.CONUS_NED'],
+	use_all_limit => 5,
+    );
+    $rslt = eval {$ele->elevation(38.898748, -77.037684)};
+    _skip_on_server_error($ele, 7);
+    ok(!$@, 'elevation() still succeeds') or diag($@);
+    is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
+    ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
+    cmp_ok(scalar @$rslt, '==', 2, 'elevation() returned two results');
+    ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
+    $rslt = {map {$_->{Data_ID} => $_} @$rslt};
+    ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
+    is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
+    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
+}
+
+SKIP: {
+    $ele->set(
+	source => ['NED.CONUS_NED_13E', 'NED.CONUS_NED', 'SRTM.SA_3_ELEVATION'],
+	use_all_limit => 0,
+    );
+    $rslt = eval {$ele->elevation(38.898748, -77.037684)};
+    _skip_on_server_error($ele, 7);
+    ok(!$@, 'elevation() done by iteration succeeds') or diag($@);
+    is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
+    ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
+    cmp_ok(scalar @$rslt, '==', 3, 'elevation() returned three results');
+    ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
+    $rslt = {map {$_->{Data_ID} => $_} @$rslt};
+    ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
+    is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
+    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
+}
+
+SKIP: {
+    $rslt = eval {$ele->elevation(38.898748, -77.037684, 1)};
+    _skip_on_server_error($ele, 7);
+    ok(!$@, 'elevation(valid) succeeds') or diag($@);
+    is(ref $rslt, 'ARRAY', 'elevation(valid) still returns an array');
+    ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
+    cmp_ok(scalar @$rslt, '==', 2, 'elevation(valid) returned two results')
+	or warn "\$@ = $@";
+    ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
+    $rslt = {map {$_->{Data_ID} => $_} @$rslt};
+    ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
+    is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
+    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
+}
+
 {
     my $msg;
     local $SIG{__WARN__} = sub {$msg = $_[0]};
     my $bogus = $ele->new();
     ok($bogus, 'Call new() as normal method');
     isnt($bogus, $ele, 'They are different objects');
+
     $bogus->set(
 	source => ['FUBAR'],
 	use_all_limit => 0,
@@ -135,24 +176,30 @@ is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
     $bogus->set(
 	use_all_limit => -1,
     );
+
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
     like($@, qr{^ERROR: Input Source Layer was invalid\.},
 	'Expect error from getElevation');
     ok(!$rslt, 'Expect no results from source \'FUBAR\'');
+
     $bogus->set(
 	source => sub {$_[1]{Data_ID} eq 'NED.CONUS_NED_13E'},
 	use_all_limit => 0,
     );
     is(ref $bogus->get('source'), 'CODE', 'Can set source to code ref');
-    $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
-    ok(!$@, 'elevation succeeded using code ref as source') or diag($@);
-    ok($rslt, 'Got a result when using code ref as source');
-    is(ref $rslt, 'ARRAY', 'Got array ref when using code ref as source');
-    ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
-    cmp_ok(scalar @$rslt, '==', 1,
-	'Got exactly one result when using code ref as source');
-    is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
-	'Got correct Data_ID when using code ref as source');
+    SKIP: {
+	$rslt = eval {$bogus->elevation(38.898748, -77.037684)};
+	_skip_on_server_error($bogus, 5);
+	ok(!$@, 'elevation succeeded using code ref as source') or diag($@);
+	ok($rslt, 'Got a result when using code ref as source');
+	is(ref $rslt, 'ARRAY', 'Got array ref when using code ref as source');
+	ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
+	cmp_ok(scalar @$rslt, '==', 1,
+	    'Got exactly one result when using code ref as source');
+	is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
+	    'Got correct Data_ID when using code ref as source');
+    }
+
     $bogus->set(source => []);
     # CAVEAT:
     # Direct manipulation of the attribute hash is UNSUPPORTED! I can't
@@ -162,6 +209,7 @@ is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
     like($@, qr{^No data found in SOAP result},
 	'No data error when going through getAllElevations');
+
     $bogus->set(croak => 0);
     $bogus->{_hack_result} = undef;
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
@@ -170,21 +218,26 @@ is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
     ok(!$rslt, 'Should return undef on bad result if croak is false');
     like($bogus->get('error'), qr{^No data found in SOAP result},
 	'No data error when going through getAllElevations');
-    $bogus->set(
-	source => {'SRTM.SA_3_ELEVATION' => 1},
-	use_all_limit => 5,
-    );
-    $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
-    ok(!$ele->get('error'),
-	'Query of SRTM.SA_3_ELEVATION still is not an error')
-	or diag($ele->get('error'));
-    ok(!$ele->is_valid($rslt->[0]),
-	'SRTM.SA_3_ELEVATION still does not return a valid elevation');
+
+    SKIP: {
+	$bogus->set(
+	    source => {'SRTM.SA_3_ELEVATION' => 1},
+	    use_all_limit => 5,
+	);
+	$rslt = eval {$bogus->elevation(38.898748, -77.037684)};
+	_skip_on_server_error($bogus, 2);
+	ok(!$bogus->get('error'),
+	    'Query of SRTM.SA_3_ELEVATION still is not an error')
+	    or diag($bogus->get('error'));
+	ok(!$bogus->is_valid($rslt->[0]),
+	    'SRTM.SA_3_ELEVATION still does not return a valid elevation');
+    }
 
     $bogus->{_hack_result} = _get_bad_som();
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
     ok($bogus->get('error'),
 	'SOAP failures other than conversion of BAD_EXTENT are still errors.');
+
     $bogus->set(croak => 1);
     $bogus->{_hack_result} = _get_bad_som();
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
@@ -192,6 +245,7 @@ is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
 	'SOAP failures other than conversion are fatal with croak => 1');
     ok($bogus->get('error'),
 	'SOAP failures should set {error} even if fatal');
+
     $bogus->set(
 	source => ['FUBAR'],
 	use_all_limit => 0,
@@ -202,11 +256,13 @@ is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
 ####	qr{ERROR: Input Source Layer was invalid},
 	qr{Source Data_ID FUBAR not found},
 	'Data set FUBAR is still an error');
+
     $bogus->set(source => undef, croak => 1);
     $bogus->{_hack_result} = undef;
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
     like($@, qr{^No data found in SOAP result},
 	'No data error when going through getElevations');
+
     $bogus->set(croak => 0);
     $bogus->{_hack_result} = undef;
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
@@ -215,18 +271,21 @@ is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
     ok(!$rslt, 'Should return undef on bad result if croak is false');
     like($bogus->get('error'), qr{^No data found in SOAP result},
 	'No data error when going through getElevation');
+
     $bogus->{_hack_result} = {};
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
     ok(!$@, 'Should not throw an error on bad result if croak is false')
 	or diag($@);
     like($bogus->get('error'), qr{^Elevation result is missing tag},
 	'Missing tag error when going through getElevation');
+
     $bogus->{_hack_result} = {USGS_Elevation_Web_Service_Query => []};
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
     ok(!$@, 'Should not throw an error on bad result if croak is false')
 	or diag($@);
     like($bogus->get('error'), qr{^Elevation result is missing tag},
 	'Missing tag error when going through getElevation');
+
     $bogus->{_hack_result} = {
 	USGS_Elevation_Web_Service_Query => {
 	    Elevation_Query => 'Something bad happened',
@@ -237,6 +296,7 @@ is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
 	or diag($@);
     like($bogus->get('error'), qr{^Something bad happened},
 	'Missing data error when going through getElevation');
+
     $bogus->set(proxy => $bogus->get('proxy') . '_xyzzy');
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
     ok(!$@, 'Should not throw an error on bad proxy if croak is false')
@@ -244,11 +304,13 @@ is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
     like($bogus->get('error'), qr{^404\b},
 	'SOAP error when going through getElevation');
     $bogus->set(source => []);
+
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
     ok(!$@, 'Should not throw an error on bad proxy if croak is false')
 	or diag($@);
     like($bogus->get('error'), qr{^404\b},
 	'SOAP error when going through getAllElevations');
+
     $bogus->set(croak => 1);
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
     ok(($msg = $@), 'Should throw an error on bad proxy if croak is true');
@@ -262,26 +324,39 @@ $ele->set(
     source => undef,
     units => 'METERS'
 );
-$rslt = eval {$ele->getElevation(38.898748, -77.037684)};
-ok(!$@, 'getElevation again succeeded') or diag($@);
-ok($rslt, 'getElevation again returned a result');
-is(ref $rslt, 'HASH', 'getElevation again returned a hash');
-is($rslt->{Data_ID}, 'NED.CONUS_NED_13E', 'Data again came from NED.CONUS_NED_13E');
-is($rslt->{Units}, 'METERS', 'Elevation is in meters');
-is($rslt->{Elevation}, '16.67', 'Elevation is 16.67');
-$rslt = eval {$ele->getElevation(38.898748, -77.037684, undef, 1)};
-ok(!$@, 'getElevation(only) succeeded') or diag($@);
-is($rslt, '16.67', 'getElevation (only) returned 16.67');
-$rslt = eval {[$ele->elevation(38.898748, -77.037684)]};
-ok(!$@, 'elevation() succeeded in list context') or diag($@);
-is(ref $rslt, 'ARRAY', 'elevation() returns an array in list context');
-ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
-cmp_ok(scalar @$rslt, '==', 1, 'elevation() returned a single result');
-is(ref ($rslt->[0]), 'HASH', 'elevation\'s only result was a hash');
-is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
-    'Data came from NED.CONUS_NED_13E');
-is($rslt->[0]{Units}, 'METERS', 'Elevation is in meters');
-is($rslt->[0]{Elevation}, '16.67', 'Elevation is 16.67');
+
+SKIP: {
+    $rslt = eval {$ele->getElevation(38.898748, -77.037684)};
+    _skip_on_server_error($ele, 6);
+    ok(!$@, 'getElevation again succeeded') or diag($@);
+    ok($rslt, 'getElevation again returned a result');
+    is(ref $rslt, 'HASH', 'getElevation again returned a hash');
+    is($rslt->{Data_ID}, 'NED.CONUS_NED_13E', 'Data again came from NED.CONUS_NED_13E');
+    is($rslt->{Units}, 'METERS', 'Elevation is in meters');
+    is($rslt->{Elevation}, '16.67', 'Elevation is 16.67');
+}
+
+SKIP: {
+    $rslt = eval {$ele->getElevation(38.898748, -77.037684, undef, 1)};
+    _skip_on_server_error($ele, 2);
+    ok(!$@, 'getElevation(only) succeeded') or diag($@);
+    is($rslt, '16.67', 'getElevation (only) returned 16.67');
+}
+
+SKIP: {
+    $rslt = eval {[$ele->elevation(38.898748, -77.037684)]};
+    _skip_on_server_error($ele, 7);
+    ok(!$@, 'elevation() succeeded in list context') or diag($@);
+    is(ref $rslt, 'ARRAY', 'elevation() returns an array in list context');
+    ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
+    cmp_ok(scalar @$rslt, '==', 1, 'elevation() returned a single result');
+    is(ref ($rslt->[0]), 'HASH', 'elevation\'s only result was a hash');
+    is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
+	'Data came from NED.CONUS_NED_13E');
+    is($rslt->[0]{Units}, 'METERS', 'Elevation is in meters');
+    is($rslt->[0]{Elevation}, '16.67', 'Elevation is 16.67');
+}
+
 eval {$ele->set(source => \*STDOUT)};
 like($@, qr{^Attribute source may not be a GLOB ref},
     'Can not set source as a glob ref');
@@ -293,54 +368,68 @@ like($@, qr{^Source GLOB ref not understood},
     'Bogus source reference gets caught in use');
 $ele->set(source => qr{^NED\.CONUS_NED}i);
 is(ref $ele->get('source'), 'Regexp', 'Can set source as a regexp ref');
-$rslt = eval {[$ele->elevation(38.898748, -77.037684)]};
-ok(!$@, 'elevation() succeeded with regexp source') or diag($@);
-is(ref $rslt, 'ARRAY', 'Get an array back from regexp source');
-ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
-cmp_ok(scalar @$rslt, '>=', 2, 'Should have at least two results');
-$rslt = {map {$_->{Data_ID} => $_} @$rslt};
-ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
-is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'METERS', 'Elevation is in meters');
-is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '16.67', 'Elevation is 16.67');
 
-
+SKIP: {
+    $rslt = eval {[$ele->elevation(38.898748, -77.037684)]};
+    _skip_on_server_error($ele, 6);
+    ok(!$@, 'elevation() succeeded with regexp source') or diag($@);
+    is(ref $rslt, 'ARRAY', 'Get an array back from regexp source');
+    ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
+    cmp_ok(scalar @$rslt, '>=', 2, 'Should have at least two results');
+    $rslt = {map {$_->{Data_ID} => $_} @$rslt};
+    ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
+    is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'METERS', 'Elevation is in meters');
+    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '16.67', 'Elevation is 16.67');
+}
 
 my $gp = {};
 bless $gp, 'Geo::Point';
 $ele->set(source => {'NED.CONUS_NED_13E' => 1});
 is(ref $ele->get('source'), 'HASH', 'Can set source as a hash');
-$rslt = eval {$ele->elevation($gp)};
-ok(!$@, 'elevation(Geo::Point) succeeded') or diag($@);
-is(ref $rslt, 'ARRAY',
-    'elevation(Geo::Point) returns an array from getAllElevations');
-ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
-cmp_ok(scalar @$rslt, '==', 1,
-    'elevation(Geo::Point) returned a single result');
-is(ref ($rslt->[0]), 'HASH', 'elevation\'s only result was a hash');
-is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
-    'Data came from NED.CONUS_NED_13E');
-is($rslt->[0]{Units}, 'METERS', 'Elevation is in meters');
-is($rslt->[0]{Elevation}, '16.67', 'Elevation is 16.67');
-$ele->set(use_all_limit => -1);	# Force iteration.
-$rslt = eval {$ele->elevation($gp)};
-ok(!$@, 'elevation(Geo::Point) via getElevation succeeded') or diag($@);
-is(ref $rslt, 'ARRAY',
-    'elevation(Geo::Point) returns an array from getElevation');
-$gp = {};
-bless $gp, 'GPS::Point';
-$ele->set(use_all_limit => 0);	# Force getAllElevations
-$rslt = eval {$ele->elevation($gp)};
-ok(!$@, 'elevation(GPS::Point) via getAllElevations succeeded') or diag($@);
-is(ref $rslt, 'ARRAY',
-    'elevation(GPS::Point) returns an array from getAllElevations');
-ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
-cmp_ok(scalar @$rslt, '==', 1,
-    'elevation(GPS::Point) returned a single result');
-is(ref ($rslt->[0]), 'HASH', 'elevation\'s only result was a hash');
-is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
-    'Data came from NED.CONUS_NED_13E');
-is($rslt->[0]{Units}, 'METERS', 'Elevation is in meters');
-is($rslt->[0]{Elevation}, '16.67', 'Elevation is 16.67');
+
+SKIP: {
+    $rslt = eval {$ele->elevation($gp)};
+    _skip_on_server_error($ele, 7);
+    ok(!$@, 'elevation(Geo::Point) succeeded') or diag($@);
+    is(ref $rslt, 'ARRAY',
+	'elevation(Geo::Point) returns an array from getAllElevations');
+    ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
+    cmp_ok(scalar @$rslt, '==', 1,
+	'elevation(Geo::Point) returned a single result');
+    is(ref ($rslt->[0]), 'HASH', 'elevation\'s only result was a hash');
+    is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
+	'Data came from NED.CONUS_NED_13E');
+    is($rslt->[0]{Units}, 'METERS', 'Elevation is in meters');
+    is($rslt->[0]{Elevation}, '16.67', 'Elevation is 16.67');
+}
+
+SKIP: {
+    $ele->set(use_all_limit => -1);	# Force iteration.
+    $rslt = eval {$ele->elevation($gp)};
+    _skip_on_server_error($ele, 2);
+    ok(!$@, 'elevation(Geo::Point) via getElevation succeeded') or diag($@);
+    is(ref $rslt, 'ARRAY',
+	'elevation(Geo::Point) returns an array from getElevation');
+}
+
+SKIP: {
+    $gp = {};
+    bless $gp, 'GPS::Point';
+    $ele->set(use_all_limit => 0);	# Force getAllElevations
+    $rslt = eval {$ele->elevation($gp)};
+    _skip_on_server_error($ele, 7);
+    ok(!$@, 'elevation(GPS::Point) via getAllElevations succeeded') or diag($@);
+    is(ref $rslt, 'ARRAY',
+	'elevation(GPS::Point) returns an array from getAllElevations');
+    ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
+    cmp_ok(scalar @$rslt, '==', 1,
+	'elevation(GPS::Point) returned a single result');
+    is(ref ($rslt->[0]), 'HASH', 'elevation\'s only result was a hash');
+    is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
+	'Data came from NED.CONUS_NED_13E');
+    is($rslt->[0]{Units}, 'METERS', 'Elevation is in meters');
+    is($rslt->[0]{Elevation}, '16.67', 'Elevation is 16.67');
+}
 
 sub _skip_it {
     @_ > 1 or unshift @_, undef;  # Because eval{} returns () in list context.
@@ -350,6 +439,17 @@ sub _skip_it {
 	exit;
     }
     $check;
+}
+
+sub _skip_on_server_error {
+    my ($ele, $how_many) = @_;
+    local $_ = $_[0]->get('error') or return;
+    m/^5\d\d\b/ ||
+    m/^ERROR: No Elevation values were returned from servers\./
+	or return;
+    my ($pkg, $file, $line) = caller(0);
+    diag("Skipping $how_many tests: $_ at $file line $line");
+    skip ($_, $how_many);
 }
 
 sub Geo::Point::latlong {
