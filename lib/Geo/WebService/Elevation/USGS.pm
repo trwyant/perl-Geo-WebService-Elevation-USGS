@@ -70,7 +70,7 @@ use Carp;
 use Scalar::Util qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.002_01';
+our $VERSION = '0.003';
 
 use constant BEST_DATA_SET => -1;
 
