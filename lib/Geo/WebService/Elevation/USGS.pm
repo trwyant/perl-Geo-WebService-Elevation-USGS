@@ -70,7 +70,7 @@ use Carp;
 use Scalar::Util qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.002';
+our $VERSION = '0.002_01';
 
 use constant BEST_DATA_SET => -1;
 
@@ -314,11 +314,11 @@ BAD_EXTENT.
 
 sub getAllElevations {
     my ($self, $lat, $lon) = _latlon(@_);
-    exists $self->{_hack_result}
-	and return $self->_digest(delete $self->{_hack_result});
     my $soap = $self->_soapdish();
 
-    my $raw = eval {
+    my $raw = exists $self->{_hack_result} ?
+	delete $self->{_hack_result} :
+	eval {
 	$soap->call (SOAP::Data->name ('getAllElevations')->attr (
 		{xmlns => $self->{default_ns}}) =>
 	    SOAP::Data->new(name => 'X_Value', type => 'string',
@@ -329,17 +329,25 @@ sub getAllElevations {
 		value => $self->{units}),
 	);
     };
-    $raw = $self->_digest($raw);
-    ref $raw eq 'HASH' or return;
+    my $cooked = $self->_digest($raw);
+    ref $cooked eq 'HASH' or return;
     my @rslt;
-    my $limit = @{$raw->{Data_ID}} - 1;
-    foreach my $inx (0 .. (scalar @{$raw->{Data_ID}} - 1)) {
-	push @rslt, {
-	    Data_Source => $raw->{Data_Source}[$inx],
-	    Data_ID => $raw->{Data_ID}[$inx],
-	    Elevation => $raw->{Elevation}[$inx],
-	    Units => $raw->{Units}[$inx],
-	};
+    my $ref = ref $cooked->{Data_ID};
+    if ($ref eq 'ARRAY') {
+	my $limit = @{$cooked->{Data_ID}} - 1;
+	foreach my $inx (0 .. (scalar @{$cooked->{Data_ID}} - 1)) {
+	    push @rslt, {
+		Data_Source => $cooked->{Data_Source}[$inx],
+		Data_ID => $cooked->{Data_ID}[$inx],
+		Elevation => $cooked->{Elevation}[$inx],
+		Units => $cooked->{Units}[$inx],
+	    };
+	}
+    } elsif ($ref) {
+	return $self->_error(
+	    "Unexpected $ref reference in {Data_ID}");
+    } else {	# One of the ActiveState MSWin32 variants seems to do this.
+	push @rslt, $cooked;
     }
     return \@rslt;
 }
@@ -413,12 +421,12 @@ about it.
 sub getElevation {
 
     my ($self, $lat, $lon, $source, $only) = _latlon(@_);
-    exists $self->{_hack_result}
-	and return $self->_digest(delete $self->{_hack_result});
     defined $source or $source = BEST_DATA_SET;
     my $soap = $self->_soapdish();
 
-    my $rslt = eval {
+    my $rslt = exists $self->{_hack_result} ?
+	delete $self->{_hack_result} :
+	eval {
 	$soap->call(SOAP::Data->name ('getElevation')->attr (
 		{xmlns => $self->{default_ns}}) =>
 	    SOAP::Data->new(name => 'X_Value', type => 'string',
@@ -434,9 +442,11 @@ sub getElevation {
 	);
     };
 
-    if (!$@ && $rslt->fault && $rslt->faultstring =~
+    my $err = $@;
+    if (!$@ && eval {$rslt->isa('SOAP::SOM')} && $rslt->fault &&
+	    $rslt->faultstring =~
 	m/Conversion from string "BAD_EXTENT" to type 'Double'/) {
-	$self->set(error => $@);
+	$@ = '';
 	my $src = _normalize_id($source);
 	return {
 	    Data_Source => $self->_get_source_name($src),
@@ -445,6 +455,7 @@ sub getElevation {
 	    Units	=> $self->{units},
 	};
     }
+    $@ = $err;
 
     return $self->_digest($rslt, $source);
 }
@@ -543,15 +554,10 @@ sub _set_use_all_limit {
 
 sub _digest {
     my ($self, $rslt, $source) = @_;
-    if ($self->{error} = $@) {
-	$self->{croak} and croak $self->{error};
-	return;
-    }
+    $@ and return $self->_error($@);
     if (eval {$rslt->isa('SOAP::SOM')}) {
 	if ($rslt->fault) {
-	    $self->{error} = $rslt->faultstring;
-	    $self->{croak} and croak $self->{error};
-	    return;
+	    return $self->_error($rslt->faultstring);
 	} else {
 	    $rslt = $rslt->result;
 	}
@@ -604,6 +610,18 @@ sub _digest {
 	}
     }
     return $rslt;
+}
+
+#	$ele->_error($text);
+#
+#	Set the error attribute, and croak if the croak attribute is
+#	true. If croak is false, just return.
+
+sub _error {
+    my $self = shift;
+    $self->{error} = join '', @_;
+    $self->{croak} and croak $self->{error};
+    return;
 }
 
 #	$source => $ele->_get_source()

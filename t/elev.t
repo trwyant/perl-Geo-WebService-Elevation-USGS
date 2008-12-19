@@ -26,7 +26,7 @@ my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(places => 2)},
 	"Unable to access $pxy");
 }
 
-plan (tests => 133);
+plan (tests => 144);
 
 my $rslt;
 
@@ -165,6 +165,24 @@ SKIP: {
     ok($bogus, 'Call new() as normal method');
     isnt($bogus, $ele, 'They are different objects');
 
+    # CAVEAT:
+    # Direct manipulation of the attribute hash is UNSUPPORTED! I can't
+    # think why anyone would want a public interface for {_hack_result}
+    # anyway. If you do, contact me, and if I can't talk you out of it
+    # we will come up with something.
+    $bogus->{_hack_result} = {
+	double => 58.6035683399111,
+    };
+    $rslt = eval {$bogus->getElevation(38.898748, -77.037684, undef, 1)};
+    ok(!$@, 'getElevation (only) succeeded') or diag($@);
+    is($rslt, '58.6035683399111',
+	'getElevation (only) returned 58.6035683399111');
+
+    $bogus->{_hack_result} = _get_bad_som();
+    $rslt = eval {$bogus->getElevation(38.898748, -77.037684, undef, 1)};
+    ok($bogus->get('error'),
+	'getElevation() SOAP failures other than BAD_EXTENT conversion are errors.');
+
     $bogus->set(
 	source => ['FUBAR'],
 	use_all_limit => 0,
@@ -201,10 +219,6 @@ SKIP: {
     }
 
     $bogus->set(source => []);
-    # CAVEAT:
-    # Direct manipulation of the attribute hash is UNSUPPORTED! I can't
-    # think why anyone would want a public interface for {_hack_result}
-    # anyway. If you do, contact me.
     $bogus->{_hack_result} = undef;
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
     like($@, qr{^No data found in SOAP result},
@@ -296,6 +310,44 @@ SKIP: {
 	or diag($@);
     like($bogus->get('error'), qr{^Something bad happened},
 	'Missing data error when going through getElevation');
+
+    $bogus->{_hack_result} = {
+	USGS_Elevation_Web_Service_Query => {
+	    Elevation_Query => {
+		Data_Source => 'NED Contiguous U. S. 1/3E arc second elevation data',
+		Data_ID	=> 'NED.CONUS_NED_13E',
+		Elevation => 58.6035683399111,
+		Units => 'FEET',
+	    },
+	},
+    };
+    $rslt = eval {$bogus->getAllElevations(38.898748, -77.037684)};
+    ok(!$bogus->get('error'),
+	'Should not declare an error processing an individual point');
+    is(ref $rslt, 'ARRAY', 'Result should still be an array ref')
+	or $rslt = [];
+    cmp_ok(scalar @$rslt, '==', 1, 'getAllelevations() returned one result');
+    ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
+    $rslt = {map {$_->{Data_ID} => $_} @$rslt};
+    ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
+    is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
+    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '58.6035683399111',
+	'Elevation is 58.6035683399111');
+
+
+    $bogus->{_hack_result} = {
+	USGS_Elevation_Web_Service_Query => {
+	    Elevation_Query => {
+		Data_Source => 'NED Contiguous U. S. 1/3E arc second elevation data',
+		Data_ID	=> {},	# Force error
+		Elevation => 58.6035683399111,
+		Units => 'FEET',
+	    },
+	},
+    };
+    $rslt = eval {$bogus->getAllElevations(38.898748, -77.037684)};
+    like($bogus->get('error'), qr{Unexpected HASH reference},
+	'Should declare an error if {Data_ID} is a hash reference');
 
     $bogus->set(proxy => $bogus->get('proxy') . '_xyzzy');
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
