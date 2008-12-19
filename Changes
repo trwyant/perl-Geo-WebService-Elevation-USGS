@@ -10,3 +10,8 @@
     the version present.
   Recode Makefile.PL in a manner corresponding to Build.PL.
   Add t/executable.t and t/manifest.t to the distribution.
+0.003
+  _Really_ recode Makefile.PL per above.
+  Correct failure in t/pod.t when Test::Pod not available.
+  Skip tests in t/elev.t when query returns a 5xx error.
+  Try to pick up data from ActivePerl test failure.
