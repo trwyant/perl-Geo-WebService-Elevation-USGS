@@ -19,8 +19,9 @@ BEGIN {
     }
     eval {
 	require Test::Perl::Critic;
-	# TODO package profile.
-	Test::Perl::Critic->import();
+	Test::Perl::Critic->import(
+	    -profile => File::Spec->catfile(qw{t perlcriticrc}),
+	);
     };
     if ($@) {
 	print "1..0 # skip Test::Perl::Critic required to criticize code.\n";

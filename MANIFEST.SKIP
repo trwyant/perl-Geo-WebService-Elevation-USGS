@@ -17,6 +17,7 @@ CVS/
 ^pod2htm.\.tmp$
 \.swp$
 ^t/critic\.t$
+^t/perlcriticrc$
 ^t/pod_spelling\.t$
 ^test_environment$
 ^TODO$
