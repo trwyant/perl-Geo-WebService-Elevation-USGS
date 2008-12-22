@@ -187,18 +187,24 @@ SKIP: {
 	source => ['FUBAR'],
 	use_all_limit => 0,
     );
-    $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
-    like($@, qr{^Source Data_ID FUBAR not found},
-	'Expect error from getAllElevations');
-    ok(!$rslt, 'Expect no results from source \'FUBAR\'');
+    SKIP: {
+	$rslt = eval {$bogus->elevation(38.898748, -77.037684)};
+	_skip_on_server_error($bogus, 2);
+	like($@, qr{^Source Data_ID FUBAR not found},
+	    'Expect error from getAllElevations');
+	ok(!$rslt, 'Expect no results from source \'FUBAR\'');
+    }
+
     $bogus->set(
 	use_all_limit => -1,
     );
-
-    $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
-    like($@, qr{^ERROR: Input Source Layer was invalid\.},
-	'Expect error from getElevation');
-    ok(!$rslt, 'Expect no results from source \'FUBAR\'');
+    SKIP: {
+	$rslt = eval {$bogus->elevation(38.898748, -77.037684)};
+	_skip_on_server_error($bogus, 2);
+	like($@, qr{^ERROR: Input Source Layer was invalid\.},
+	    'Expect error from getElevation');
+	ok(!$rslt, 'Expect no results from source \'FUBAR\'');
+    }
 
     $bogus->set(
 	source => sub {$_[1]{Data_ID} eq 'NED.CONUS_NED_13E'},
@@ -265,11 +271,14 @@ SKIP: {
 	use_all_limit => 0,
 	croak => 0,
     );
-    $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
-    like($bogus->get('error'),
-####	qr{ERROR: Input Source Layer was invalid},
-	qr{Source Data_ID FUBAR not found},
-	'Data set FUBAR is still an error');
+    SKIP: {
+	$rslt = eval {$bogus->elevation(38.898748, -77.037684)};
+	_skip_on_server_error($bogus, 1);
+	like($bogus->get('error'),
+####	    qr{ERROR: Input Source Layer was invalid},
+	    qr{Source Data_ID FUBAR not found},
+	    'Data set FUBAR is still an error');
+    }
 
     $bogus->set(source => undef, croak => 1);
     $bogus->{_hack_result} = undef;
@@ -350,24 +359,33 @@ SKIP: {
 	'Should declare an error if {Data_ID} is a hash reference');
 
     $bogus->set(proxy => $bogus->get('proxy') . '_xyzzy');
-    $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
-    ok(!$@, 'Should not throw an error on bad proxy if croak is false')
-	or diag($@);
-    like($bogus->get('error'), qr{^404\b},
-	'SOAP error when going through getElevation');
-    $bogus->set(source => []);
+    SKIP: {
+	$rslt = eval {$bogus->elevation(38.898748, -77.037684)};
+	_skip_on_server_error($bogus, 2);
+	ok(!$@, 'Should not throw an error on bad proxy if croak is false')
+	    or diag($@);
+	like($bogus->get('error'), qr{^404\b},
+	    'SOAP error when going through getElevation');
+    }
 
-    $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
-    ok(!$@, 'Should not throw an error on bad proxy if croak is false')
-	or diag($@);
-    like($bogus->get('error'), qr{^404\b},
-	'SOAP error when going through getAllElevations');
+    $bogus->set(source => []);
+    SKIP: {
+	$rslt = eval {$bogus->elevation(38.898748, -77.037684)};
+	_skip_on_server_error($bogus, 2);
+	ok(!$@, 'Should not throw an error on bad proxy if croak is false')
+	    or diag($@);
+	like($bogus->get('error'), qr{^404\b},
+	    'SOAP error when going through getAllElevations');
+    }
 
     $bogus->set(croak => 1);
-    $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
-    ok(($msg = $@), 'Should throw an error on bad proxy if croak is true');
-    like($msg, qr{^404\b},
-	'SOAP error when going through getAllElevations');
+    SKIP: {
+	$rslt = eval {$bogus->elevation(38.898748, -77.037684)};
+	_skip_on_server_error($bogus, 2);
+	ok(($msg = $@), 'Should throw an error on bad proxy if croak is true');
+	like($msg, qr{^404\b},
+	    'SOAP error when going through getAllElevations');
+    }
 
 }
 
