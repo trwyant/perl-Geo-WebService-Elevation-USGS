@@ -1,3 +1,5 @@
+package main;
+
 use strict;
 use warnings;
 
@@ -100,3 +102,5 @@ ok($rslt, 'is_valid({Elevation => 0}) should be true');
 $rslt = eval {$ele->is_valid([])};
 like ($@, qr{^ARRAY reference not understood},
     'is_valid() should croak when passed an array reference');
+
+1;

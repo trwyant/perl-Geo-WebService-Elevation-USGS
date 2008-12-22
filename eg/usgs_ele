@@ -107,7 +107,7 @@ sub cmd_exit {
 # The help command displays very brief help.
 
 sub cmd_help {
-    <<eod;
+    return <<eod;
 
 Possible commands:
 
@@ -134,13 +134,13 @@ eod
 # The 'new' command wraps the Geo::WebService::Elevation::USGS 'new', nabs the new
 # object, and puts it where we can find it.
 
-sub cmd_new {
-    $ele = Geo::WebService::Elevation::USGS->new(@_);
+sub cmd_new {	## no critic RequireArgUnpacking
+    return $ele = Geo::WebService::Elevation::USGS->new(@_);
 }
 
 # The 'sources' command sets the source attribute to a reference to the
 # array of its arguments (which may be empty).
 
-sub cmd_sources {
-    $ele->set(source => [@_]);
+sub cmd_sources {	## no critic RequireArgUnpacking
+    return $ele->set(source => [@_]);
 }

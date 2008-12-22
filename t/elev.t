@@ -1,3 +1,5 @@
+package main;
+
 use strict;
 use warnings;
 
@@ -82,7 +84,8 @@ SKIP: {
     is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '>', 1, 'elevation() returned multiple results');
-    ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
+    ok(!(grep {ref $_ ne 'HASH'} @$rslt),
+	'elevation\'s results are all hashes');
     $rslt = {map {$_->{Data_ID} => $_} @$rslt};
     ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
     is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
@@ -100,7 +103,8 @@ SKIP: {
 	'elevation() with hash source still returns an array');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '>', 1, 'elevation() returned multiple results');
-    ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
+    ok(!(grep {ref $_ ne 'HASH'} @$rslt),
+	'elevation\'s results are all hashes');
     $rslt = {map {$_->{Data_ID} => $_} @$rslt};
     ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
     is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
@@ -118,7 +122,8 @@ SKIP: {
     is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '==', 2, 'elevation() returned two results');
-    ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
+    ok(!(grep {ref $_ ne 'HASH'} @$rslt),
+	'elevation\'s results are all hashes');
     $rslt = {map {$_->{Data_ID} => $_} @$rslt};
     ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
     is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
@@ -136,7 +141,8 @@ SKIP: {
     is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '==', 3, 'elevation() returned three results');
-    ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
+    ok(!(grep {ref $_ ne 'HASH'} @$rslt),
+	'elevation\'s results are all hashes');
     $rslt = {map {$_->{Data_ID} => $_} @$rslt};
     ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
     is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
@@ -151,7 +157,8 @@ SKIP: {
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '==', 2, 'elevation(valid) returned two results')
 	or warn "\$@ = $@";
-    ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
+    ok(!(grep {ref $_ ne 'HASH'} @$rslt),
+	'elevation\'s results are all hashes');
     $rslt = {map {$_->{Data_ID} => $_} @$rslt};
     ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
     is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
@@ -336,7 +343,8 @@ SKIP: {
     is(ref $rslt, 'ARRAY', 'Result should still be an array ref')
 	or $rslt = [];
     cmp_ok(scalar @$rslt, '==', 1, 'getAllelevations() returned one result');
-    ok(!(grep ref $_ ne 'HASH', @$rslt), 'elevation\'s results are all hashes');
+    ok(!(grep {ref $_ ne 'HASH'} @$rslt),
+	'elevation\'s results are all hashes');
     $rslt = {map {$_->{Data_ID} => $_} @$rslt};
     ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
     is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
@@ -501,38 +509,43 @@ SKIP: {
     is($rslt->[0]{Elevation}, '16.67', 'Elevation is 16.67');
 }
 
-sub _skip_it {
+# I need to mung the argument list before use because the idea is to
+# call this with an indication of whether to skip the whole test and
+# a reason for skipping. The first argument may be computed inside an
+# eval{}, which returns () in list context on failure.
+#
+sub _skip_it {	## no critic RequireArgUnpacking
     @_ > 1 or unshift @_, undef;  # Because eval{} returns () in list context.
     my ($check, $reason) = @_;
     unless ($check) {
 	plan (skip_all => $reason);
 	exit;
     }
-    $check;
+    return $check;
 }
 
 sub _skip_on_server_error {
     my ($ele, $how_many) = @_;
-    local $_ = $_[0]->get('error') or return;
-    m/^5\d\d\b/ ||
-    m/^ERROR: No Elevation values were returned from servers\./
-	or return;
+    local $_ = $ele->get('error') or return;
+    (m/^5\d\d\b/ ||
+	m/^ERROR: No Elevation values were returned from servers\./
+    ) or return;
     my ($pkg, $file, $line) = caller(0);
     diag("Skipping $how_many tests: $_ at $file line $line");
-    skip ($_, $how_many);
+    return skip ($_, $how_many);
 }
 
 sub Geo::Point::latlong {
-    (38.898748, -77.037684)
+    return (38.898748, -77.037684)
 }
 
 sub GPS::Point::latlon {
-    (38.898748, -77.037684)
+    return (38.898748, -77.037684)
 }
 
 my $VAR1;
 sub _get_bad_som {
-    $VAR1 ||= bless( {
+    return ($VAR1 ||= bless( {
                  '_content' => [
                                  'soap:Envelope',
                                  {
@@ -1063,5 +1076,7 @@ sub _get_bad_som {
                  '_current' => [
                                  $VAR1->{'_content'}
                                ]
-               }, 'SOAP::SOM' );
+               }, 'SOAP::SOM' ));
 }
+
+1;

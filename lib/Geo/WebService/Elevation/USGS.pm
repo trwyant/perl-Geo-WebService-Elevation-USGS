@@ -70,9 +70,13 @@ use Carp;
 use Scalar::Util qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.003';
+our $VERSION = '0.003_01';
 
-use constant BEST_DATA_SET => -1;
+# Perl::Critic objects to the constant pragma on the grounds that it
+# does not interpolate. It does in fact interpolate, you just have to
+# use the correct syntax, e.g.
+# print "BEST_DATA_SET = @{[BEST_DATA_SET]}\n";
+use constant BEST_DATA_SET => -1;	## no critic ProhibitConstantPragma
 
 =head3 $eq = Geo::WebService::Elevation::USGS->new();
 
@@ -83,8 +87,9 @@ returned.
 =cut
 
 sub new {
-    my $class = ref $_[0] || $_[0]
-	or croak "No class name specified";
+    my ($class, @args) = @_;
+    ref $class and $class = ref $class;
+    $class or croak "No class name specified";
     shift;
     my $self = {
 	croak	=> 1,
@@ -100,8 +105,8 @@ sub new {
 	use_all_limit => 5,
     };
     bless $self, $class;
-    @_ and $self->set(@_);
-    $self;
+    @args and $self->set(@args);
+    return $self;
 }
 
 my %mutator = (
@@ -125,9 +130,10 @@ the object. If called in scalar context it returns a hash reference.
 =cut
 
 sub attributes {
+    my $self = shift;
     my %attr;
     foreach (keys %mutator) {
-	$attr{$_} = $_[0]{$_};
+	$attr{$_} = $self->{$_};
     }
     return wantarray ? %attr : \%attr;
 }
@@ -233,7 +239,9 @@ that this may result in an empty array.
 	},
     );
 
-    sub elevation {
+    # Perl::Critic objects to the fact that I'm calling _latlon to do my
+    # argument unpacking.
+    sub elevation {	## no critic RequireArgUnpacking
 	my ($self, $lat, $lon, $valid) = _latlon(@_);
 	my $ref = ref (my $source = $self->_get_source());
 	my $rslt;
@@ -249,7 +257,7 @@ that this may result in an empty array.
 	    my $check = $filter{$ref}->($source);
 	    ref (my $raw = $self->getAllElevations($lat, $lon)) eq 'ARRAY'
 		or return;
-	    $rslt = [grep $check->($self, $source, $_), @$raw];
+	    $rslt = [grep {$check->($self, $source, $_)} @$raw];
   	    if ($ref eq 'HASH') {
 		foreach (sort keys %$source) {
 		    my $err = "Source Data_ID $_ not found";
@@ -265,9 +273,9 @@ that this may result in an empty array.
 	    $rslt = [$raw];
 	}
 	if ($valid) {
-	    $rslt = [grep is_valid($_), @$rslt];
+	    $rslt = [grep {is_valid($_)} @$rslt];
 	}
-	wantarray ? @$rslt : $rslt;
+	return wantarray ? @$rslt : $rslt;
     }
 }
 
@@ -282,7 +290,7 @@ sub get {
     my ($self, $attr) = @_;
     exists $mutator{$attr}
 	or croak "No such attribute as '$attr'";
-    $self->{$attr};
+    return $self->{$attr};
 }
 
 =head3 $rslt = $eq->getAllElevations($lat, $lon);
@@ -312,7 +320,9 @@ BAD_EXTENT.
 
 =cut
 
-sub getAllElevations {
+# Perl::Critic objects to the fact that I'm calling _latlon to do my
+# argument unpacking.
+sub getAllElevations {	## no critic RequireArgUnpacking
     my ($self, $lat, $lon) = _latlon(@_);
     my $soap = $self->_soapdish();
 
@@ -418,7 +428,9 @@ about it.
 
 =cut
 
-sub getElevation {
+# Perl::Critic objects to the fact that I'm calling _latlon to do my
+# argument unpacking.
+sub getElevation {	## no critic RequireArgUnpacking
 
     my ($self, $lat, $lon, $source, $only) = _latlon(@_);
     defined $source or $source = BEST_DATA_SET;
@@ -442,11 +454,11 @@ sub getElevation {
 	);
     };
 
-    my $err = $@;
-    if (!$@ && eval {$rslt->isa('SOAP::SOM')} && $rslt->fault &&
+    $@ and return $self->_digest($rslt, $source);
+
+    if (eval {$rslt->isa('SOAP::SOM')} && $rslt->fault &&
 	    $rslt->faultstring =~
 	m/Conversion from string "BAD_EXTENT" to type 'Double'/) {
-	$@ = '';
 	my $src = _normalize_id($source);
 	return {
 	    Data_Source => $self->_get_source_name($src),
@@ -455,7 +467,7 @@ sub getElevation {
 	    Units	=> $self->{units},
 	};
     }
-    $@ = $err;
+    eval {1};	# Clear possible error from eval{$rslt->isa('SOAP::SOM'}
 
     return $self->_digest($rslt, $source);
 }
@@ -471,7 +483,7 @@ or a hash whose {Elevation} key supplies the elevation value.
 =cut
 
 sub is_valid {
-    my $ele = pop @_;
+    my $ele = pop;
     my $ref = ref $ele;
     if ($ref eq 'HASH') {
 	$ele = $ele->{Elevation};
@@ -491,46 +503,50 @@ result in an exception being thrown.
 =cut
 
 sub set {
-    my $self = shift;
-    while (@_) {
-	my $attr = shift;
+    my ($self, @args) = @_;
+    while (@args) {
+	my $attr = shift @args;
 	exists $mutator{$attr}
 	    or croak "No such attribute as '$attr'";
-	$mutator{$attr}->($self, $attr, shift);
+	$mutator{$attr}->($self, $attr, shift @args);
     }
-    $self;
+    return $self;
 }
 
 sub _set_integer {
-    !defined $_[2] || $_[2] !~ m/^[-+]?\d+$/
-	and croak "Attribute $_[1] must be an integer";
-    $_[0]{$_[1]} = $_[2] + 0;
+    my ($self, $name, $val) = @_;
+    (!defined $val || $val !~ m/^[-+]?\d+$/)
+	and croak "Attribute $name must be an integer";
+    return ($self->{$name} = $val + 0);
 }
 
 sub _set_integer_or_undef {
-    defined $_[2] && $_[2] !~ m/^\d+$/
-	and croak "Attribute $_[1] must be an unsigned integer or undef";
-    $_[0]{$_[1]} = $_[2];
+    my ($self, $name, $val) = @_;
+    (defined $val && $val !~ m/^\d+$/)
+	and croak "Attribute $name must be an unsigned integer or undef";
+    return ($self->{$name} = $val);
 }
 
-sub _set_literal {
-    $_[0]{$_[1]} = $_[2];
+sub _set_literal {	## no critic RequireArgUnpacking
+    return $_[0]{$_[1]} = $_[2];
 }
 
 {
     my %supported = map {$_ => 1} qw{ARRAY CODE HASH Regexp};
     sub _set_source {
-	my $ref = ref $_[2];
-	$ref && !$supported{$ref}
-	    and croak "Attribute $_[1] may not be a $ref ref";
-	delete $_[0]{_source_cache};
-	$_[0]{$_[1]} = $_[2];
+	my ($self, $name, $val) = @_;
+	my $ref = ref $val;
+	($ref && !$supported{$ref})
+	    and croak "Attribute $name may not be a $ref ref";
+	delete $self->{_source_cache};
+	return ($self->{$name} = $val);
     }
 }
 
-sub _set_use_all_limit {
+sub _set_use_all_limit {	## no critic RequireArgUnpacking
     _set_integer(@_);
     delete $_[0]{_source_cache};
+    return;
 }
 
 ########################################################################
@@ -562,7 +578,7 @@ sub _digest {
 	    $rslt = $rslt->result;
 	}
     } else {
-	$@ = '';
+	eval {1};	# Clear $@, which may have been set by $rslt->isa
     }
     $self->{trace} and SOAP::Trace->import('-all');
     my $round;
@@ -583,7 +599,7 @@ sub _digest {
 		$rslt->{double};
 	foreach my $key (
 	    qw{USGS_Elevation_Web_Service_Query Elevation_Query}) {
-	    ref $rslt eq 'HASH' && exists $rslt->{$key} or do {
+	    (ref $rslt eq 'HASH' && exists $rslt->{$key}) or do {
 		$self->{error} = "Elevation result is missing tag <$key>";
 		last;
 	    };
@@ -604,7 +620,7 @@ sub _digest {
     if ($rslt && $round) {
 	if (ref $rslt->{Elevation}) {
 	    $rslt->{Elevation} = [
-		map $round->($_), @{$rslt->{Elevation}}];
+		map {$round->($_)} @{$rslt->{Elevation}}];
 	} else {
 	    $rslt->{Elevation} = $round->($rslt->{Elevation});
 	}
@@ -618,8 +634,8 @@ sub _digest {
 #	true. If croak is false, just return.
 
 sub _error {
-    my $self = shift;
-    $self->{error} = join '', @_;
+    my ($self, @args) = @_;
+    $self->{error} = join '', @args;
     $self->{croak} and croak $self->{error};
     return;
 }
@@ -685,8 +701,8 @@ sub _get_source {
 
 =cut
 
-sub _get_source {
-    ($_[0]{_source_cache} ||= _get_source_cache(@_))->();
+sub _get_source {	## no critic RequireArgUnpacking
+    return ($_[0]{_source_cache} ||= _get_source_cache(@_))->();
 }
 
 sub _get_source_cache {
@@ -704,9 +720,9 @@ sub _get_source_cache {
     @$source or return sub {{}};
     my $limit = $self->get('use_all_limit');
 ####    $limit < 0 || @$source < $limit || grep m/^\*/i, @$source
-    $limit < 0 || @$source < $limit
+    ($limit < 0 || @$source < $limit)
 	and return sub {$source};
-    $source = [map _normalize_id($_), @$source];
+    $source = [map {_normalize_id($_)} @$source];
     return sub {
 	my %src = map {$_ => 1} @$source;
 	return \%src;
@@ -730,7 +746,7 @@ sub _get_source_cache {
 		    $data->{Data_Source};
 	    }
 	}
-	$name{$id};
+	return $name{$id};
     }
 }
 
@@ -751,16 +767,16 @@ sub _get_source_cache {
     );
 
     sub _latlon {
-	my $self = shift;
-	my $err = $@;
+	my ($self, $obj, @args) = @_;
+	my $err = $@;	# Preserve any error around operation that may fail.
 	foreach my $class (keys %known) {
-	    if (eval {$_[0]->isa($class)}) {
-		$@ = $err;
-		return ($self, $known{$class}->(shift), @_);
+	    if (eval {$obj->isa($class)}) {
+		$@ = $err;	## no critic RequireLocalizedPunctuationVars
+		return ($self, $known{$class}->($obj), @args);
 	    }
 	}
-	$@ = $err;
-	return ($self, @_);
+	$@ = $err;	## no critic RequireLocalizedPunctuationVars
+	return ($self, $obj, @args);
     }
 }
 
@@ -769,7 +785,7 @@ sub _get_source_cache {
 #	This subroutine normalizes a Source_ID by uppercasing it. It
 #	exists to centralize this operation.
 
-sub _normalize_id {uc $_[0]}
+sub _normalize_id {return uc $_[0]}	## no critic RequireArgUnpacking
 
 #	$soap_object = _soapdish ()
 
@@ -797,8 +813,8 @@ sub _soapdish {
 	    ->on_action ($act)
 	    ->uri ($self->{default_ns})
 	    ->proxy ($self->{proxy}, timeout => $self->{timeout});
-    $@ = undef;
-    $soap;
+    eval {1};	# Clear $@.
+    return $soap;
 }
 
 1;
