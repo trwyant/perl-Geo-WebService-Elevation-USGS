@@ -30,6 +30,9 @@ my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(places => 2)},
 
 plan (tests => 144);
 
+my $ele_ft = '54.70';	# Expected elevation in feet.
+my $ele_mt = '16.67';	# Expected elevation in meters.
+
 my $rslt;
 
 SKIP: {
@@ -41,14 +44,14 @@ SKIP: {
     is($rslt->{Data_ID}, 'NED.CONUS_NED_13E',
 	'Data came from NED.CONUS_NED_13E');
     is($rslt->{Units}, 'FEET', 'Elevation is in feet');
-    is($rslt->{Elevation}, '54.70', 'Elevation is 54.70');
+    is($rslt->{Elevation}, $ele_ft, "Elevation is $ele_ft");
 }
 
 SKIP: {
     $rslt = eval {$ele->getElevation(38.898748, -77.037684, undef, 1)};
     _skip_on_server_error($ele, 2);
     ok(!$@, 'getElevation (only) succeeded') or diag($@);
-    is($rslt, '54.70', 'getElevation (only) returned 54.70');
+    is($rslt, $ele_ft, "getElevation (only) returned $ele_ft");
 }
 
 SKIP: {
@@ -62,7 +65,7 @@ SKIP: {
     is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
 	'Data came from NED.CONUS_NED_13E');
     is($rslt->[0]{Units}, 'FEET', 'Elevation is in feet');
-    is($rslt->[0]{Elevation}, '54.70', 'Elevation is 54.70');
+    is($rslt->[0]{Elevation}, $ele_ft, "Elevation is $ele_ft");
 }
 
 SKIP: {
@@ -89,7 +92,7 @@ SKIP: {
     $rslt = {map {$_->{Data_ID} => $_} @$rslt};
     ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
     is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
-    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
+    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, $ele_ft, "Elevation is $ele_ft");
 }
 
 $ele->set(source => {});
@@ -108,7 +111,7 @@ SKIP: {
     $rslt = {map {$_->{Data_ID} => $_} @$rslt};
     ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
     is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
-    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
+    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, $ele_ft, "Elevation is $ele_ft");
 }
 
 SKIP: {
@@ -127,7 +130,7 @@ SKIP: {
     $rslt = {map {$_->{Data_ID} => $_} @$rslt};
     ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
     is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
-    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
+    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, $ele_ft, "Elevation is $ele_ft");
 }
 
 SKIP: {
@@ -146,7 +149,7 @@ SKIP: {
     $rslt = {map {$_->{Data_ID} => $_} @$rslt};
     ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
     is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
-    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
+    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, $ele_ft, "Elevation is $ele_ft");
 }
 
 SKIP: {
@@ -162,7 +165,7 @@ SKIP: {
     $rslt = {map {$_->{Data_ID} => $_} @$rslt};
     ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
     is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'FEET', 'Elevation is in feet');
-    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '54.70', 'Elevation is 54.70');
+    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, $ele_ft, "Elevation is $ele_ft");
 }
 
 {
@@ -411,14 +414,14 @@ SKIP: {
     is(ref $rslt, 'HASH', 'getElevation again returned a hash');
     is($rslt->{Data_ID}, 'NED.CONUS_NED_13E', 'Data again came from NED.CONUS_NED_13E');
     is($rslt->{Units}, 'METERS', 'Elevation is in meters');
-    is($rslt->{Elevation}, '16.67', 'Elevation is 16.67');
+    is($rslt->{Elevation}, $ele_mt, "Elevation is $ele_mt");
 }
 
 SKIP: {
     $rslt = eval {$ele->getElevation(38.898748, -77.037684, undef, 1)};
     _skip_on_server_error($ele, 2);
     ok(!$@, 'getElevation(only) succeeded') or diag($@);
-    is($rslt, '16.67', 'getElevation (only) returned 16.67');
+    is($rslt, $ele_mt, "getElevation (only) returned $ele_mt");
 }
 
 SKIP: {
@@ -432,7 +435,7 @@ SKIP: {
     is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
 	'Data came from NED.CONUS_NED_13E');
     is($rslt->[0]{Units}, 'METERS', 'Elevation is in meters');
-    is($rslt->[0]{Elevation}, '16.67', 'Elevation is 16.67');
+    is($rslt->[0]{Elevation}, $ele_mt, "Elevation is $ele_mt");
 }
 
 eval {$ele->set(source => \*STDOUT)};
@@ -457,7 +460,7 @@ SKIP: {
     $rslt = {map {$_->{Data_ID} => $_} @$rslt};
     ok($rslt->{'NED.CONUS_NED_13E'}, 'We have results from NED.CONUS_NED_13E');
     is($rslt->{'NED.CONUS_NED_13E'}{Units}, 'METERS', 'Elevation is in meters');
-    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, '16.67', 'Elevation is 16.67');
+    is($rslt->{'NED.CONUS_NED_13E'}{Elevation}, $ele_mt, "Elevation is $ele_mt");
 }
 
 my $gp = {};
@@ -478,7 +481,7 @@ SKIP: {
     is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
 	'Data came from NED.CONUS_NED_13E');
     is($rslt->[0]{Units}, 'METERS', 'Elevation is in meters');
-    is($rslt->[0]{Elevation}, '16.67', 'Elevation is 16.67');
+    is($rslt->[0]{Elevation}, $ele_mt, "Elevation is $ele_mt");
 }
 
 SKIP: {
@@ -491,22 +494,37 @@ SKIP: {
 }
 
 SKIP: {
-    $gp = {};
-    bless $gp, 'GPS::Point';
+    my $kind;
+    if (eval {require GPS::Point}) {
+	$gp = GPS::Point->new();
+	$gp->lat(38.898748);
+	$gp->lon(-77.037684);
+	$gp->alt(undef);
+	$kind = 'real GPS::Point';
+    } else {
+	$gp = {};
+	bless $gp, 'GPS::Point';
+	no warnings qw{once};
+	*GPS::Point::latlon = sub {
+	    return (38.898748, -77.037684)
+	};
+	$kind = 'dummy GPS::Point';
+    }
     $ele->set(use_all_limit => 0);	# Force getAllElevations
     $rslt = eval {$ele->elevation($gp)};
     _skip_on_server_error($ele, 7);
-    ok(!$@, 'elevation(GPS::Point) via getAllElevations succeeded') or diag($@);
+    ok(!$@, "elevation($kind GPS::Point) via getAllElevations succeeded")
+	or diag($@);
     is(ref $rslt, 'ARRAY',
-	'elevation(GPS::Point) returns an array from getAllElevations');
+	"elevation($kind) returns an array from getAllElevations");
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '==', 1,
-	'elevation(GPS::Point) returned a single result');
-    is(ref ($rslt->[0]), 'HASH', 'elevation\'s only result was a hash');
+	"elevation($kind) returned a single result");
+    is(ref ($rslt->[0]), 'HASH', "$kind elevation's only result was a hash");
     is($rslt->[0]{Data_ID}, 'NED.CONUS_NED_13E',
-	'Data came from NED.CONUS_NED_13E');
-    is($rslt->[0]{Units}, 'METERS', 'Elevation is in meters');
-    is($rslt->[0]{Elevation}, '16.67', 'Elevation is 16.67');
+	"$kind data came from NED.CONUS_NED_13E");
+    is($rslt->[0]{Units}, 'METERS', "$kind elevation is in meters");
+    is($rslt->[0]{Elevation}, $ele_mt, "$kind elevation is $ele_mt");
 }
 
 # I need to mung the argument list before use because the idea is to
@@ -514,9 +532,11 @@ SKIP: {
 # a reason for skipping. The first argument may be computed inside an
 # eval{}, which returns () in list context on failure.
 #
-sub _skip_it {	## no critic RequireArgUnpacking
-    @_ > 1 or unshift @_, undef;  # Because eval{} returns () in list context.
-    my ($check, $reason) = @_;
+sub _skip_it {
+    my @args = @_;
+    @args > 1
+	or unshift @args, undef;  # Because eval{} returns () in list context.
+    my ($check, $reason) = @args;
     unless ($check) {
 	plan (skip_all => $reason);
 	exit;
@@ -536,10 +556,6 @@ sub _skip_on_server_error {
 }
 
 sub Geo::Point::latlong {
-    return (38.898748, -77.037684)
-}
-
-sub GPS::Point::latlon {
     return (38.898748, -77.037684)
 }
 
