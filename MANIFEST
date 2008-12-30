@@ -8,8 +8,10 @@ MANIFEST			This list of files
 META.yml
 README
 t/basic.t
+t/critic.t
 t/elev.t
 t/executable.t
 t/manifest.t
+t/perlcriticrc
 t/pod.t
 t/pod_coverage.t
