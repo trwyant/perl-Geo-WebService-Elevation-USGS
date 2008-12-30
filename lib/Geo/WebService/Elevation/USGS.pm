@@ -67,16 +67,13 @@ use strict;
 use warnings;
 
 use Carp;
+use Params::Util 0.11 qw{_INSTANCE};
 use Scalar::Util qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.003_01';
+our $VERSION = '0.003_02';
 
-# Perl::Critic objects to the constant pragma on the grounds that it
-# does not interpolate. It does in fact interpolate, you just have to
-# use the correct syntax, e.g.
-# print "BEST_DATA_SET = @{[BEST_DATA_SET]}\n";
-use constant BEST_DATA_SET => -1;	## no critic ProhibitConstantPragma
+use constant BEST_DATA_SET => -1;
 
 =head3 $eq = Geo::WebService::Elevation::USGS->new();
 
@@ -239,10 +236,9 @@ that this may result in an empty array.
 	},
     );
 
-    # Perl::Critic objects to the fact that I'm calling _latlon to do my
-    # argument unpacking.
-    sub elevation {	## no critic RequireArgUnpacking
-	my ($self, $lat, $lon, $valid) = _latlon(@_);
+    sub elevation {
+	my @args = @_;
+	my ($self, $lat, $lon, $valid) = _latlon(@args);
 	my $ref = ref (my $source = $self->_get_source());
 	my $rslt;
 	if ($ref eq 'ARRAY') {
@@ -320,10 +316,9 @@ BAD_EXTENT.
 
 =cut
 
-# Perl::Critic objects to the fact that I'm calling _latlon to do my
-# argument unpacking.
-sub getAllElevations {	## no critic RequireArgUnpacking
-    my ($self, $lat, $lon) = _latlon(@_);
+sub getAllElevations {
+    my @args = @_;
+    my ($self, $lat, $lon) = _latlon(@args);
     my $soap = $self->_soapdish();
 
     my $raw = exists $self->{_hack_result} ?
@@ -428,11 +423,9 @@ about it.
 
 =cut
 
-# Perl::Critic objects to the fact that I'm calling _latlon to do my
-# argument unpacking.
-sub getElevation {	## no critic RequireArgUnpacking
-
-    my ($self, $lat, $lon, $source, $only) = _latlon(@_);
+sub getElevation {
+    my @args = @_;
+    my ($self, $lat, $lon, $source, $only) = _latlon(@args);
     defined $source or $source = BEST_DATA_SET;
     my $soap = $self->_soapdish();
 
@@ -456,7 +449,7 @@ sub getElevation {	## no critic RequireArgUnpacking
 
     $@ and return $self->_digest($rslt, $source);
 
-    if (eval {$rslt->isa('SOAP::SOM')} && $rslt->fault &&
+    if (_INSTANCE($rslt, 'SOAP::SOM') && $rslt->fault &&
 	    $rslt->faultstring =~
 	m/Conversion from string "BAD_EXTENT" to type 'Double'/) {
 	my $src = _normalize_id($source);
@@ -467,7 +460,6 @@ sub getElevation {	## no critic RequireArgUnpacking
 	    Units	=> $self->{units},
 	};
     }
-    eval {1};	# Clear possible error from eval{$rslt->isa('SOAP::SOM'}
 
     return $self->_digest($rslt, $source);
 }
@@ -527,7 +519,7 @@ sub _set_integer_or_undef {
     return ($self->{$name} = $val);
 }
 
-sub _set_literal {	## no critic RequireArgUnpacking
+sub _set_literal {
     return $_[0]{$_[1]} = $_[2];
 }
 
@@ -543,7 +535,7 @@ sub _set_literal {	## no critic RequireArgUnpacking
     }
 }
 
-sub _set_use_all_limit {	## no critic RequireArgUnpacking
+sub _set_use_all_limit {
     _set_integer(@_);
     delete $_[0]{_source_cache};
     return;
@@ -571,14 +563,12 @@ sub _set_use_all_limit {	## no critic RequireArgUnpacking
 sub _digest {
     my ($self, $rslt, $source) = @_;
     $@ and return $self->_error($@);
-    if (eval {$rslt->isa('SOAP::SOM')}) {
+    if (_INSTANCE($rslt, 'SOAP::SOM')) {
 	if ($rslt->fault) {
 	    return $self->_error($rslt->faultstring);
 	} else {
 	    $rslt = $rslt->result;
 	}
-    } else {
-	eval {1};	# Clear $@, which may have been set by $rslt->isa
     }
     $self->{trace} and SOAP::Trace->import('-all');
     my $round;
@@ -701,7 +691,7 @@ sub _get_source {
 
 =cut
 
-sub _get_source {	## no critic RequireArgUnpacking
+sub _get_source {
     return ($_[0]{_source_cache} ||= _get_source_cache(@_))->();
 }
 
@@ -768,14 +758,11 @@ sub _get_source_cache {
 
     sub _latlon {
 	my ($self, $obj, @args) = @_;
-	my $err = $@;	# Preserve any error around operation that may fail.
 	foreach my $class (keys %known) {
-	    if (eval {$obj->isa($class)}) {
-		$@ = $err;	## no critic RequireLocalizedPunctuationVars
+	    if (_INSTANCE($obj, $class)) {
 		return ($self, $known{$class}->($obj), @args);
 	    }
 	}
-	$@ = $err;	## no critic RequireLocalizedPunctuationVars
 	return ($self, $obj, @args);
     }
 }
@@ -785,7 +772,7 @@ sub _get_source_cache {
 #	This subroutine normalizes a Source_ID by uppercasing it. It
 #	exists to centralize this operation.
 
-sub _normalize_id {return uc $_[0]}	## no critic RequireArgUnpacking
+sub _normalize_id {return uc $_[0]}
 
 #	$soap_object = _soapdish ()
 
