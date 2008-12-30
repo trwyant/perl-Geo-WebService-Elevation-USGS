@@ -15,6 +15,7 @@ my %args = (
 	'Test::More' => 0.40,
     },
     requires => {
+	'Params::Util' => 0.11,
 	'SOAP::Lite' => 0,
     },
     license => 'perl',
