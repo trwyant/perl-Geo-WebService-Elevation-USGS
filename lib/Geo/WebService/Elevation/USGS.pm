@@ -24,6 +24,25 @@ an error by an undef response, with the error retrievable from the
 For documentation on the underlying web service, see
 L<http://gisdata.usgs.gov/XMLWebServices/TNM_Elevation_Service.php>.
 
+For all methods, the input latitude and longitude are documented at the
+above web site as being WGS84, which for practical purposes I understand
+to be equivalent to NAD83. The vertical reference is not documented
+under the above link, but correspondence with the USGS says that it is
+derived from the National Elevation Dataset (NED; see
+L<http://ned.usgs.gov>). This is referred to NAD83 (horizontal) and
+NAVD88 (vertical). NAVD88 is based on geodetic leveling surveys, B<not
+the WGS84/NAD83 ellipsoid,> and takes as its zero datum sea level at
+Father Point/Rimouski, in Quebec, Canada. Alaska is an exception, and is
+based on NAD27 (horizontal) and NAVD29 (vertical).
+
+Anyone interested in the gory details may find the paper I<Converting
+GPS Height into NAVD88 Elevation with the GEOID96 Geoid Height Model> by
+Dennis G. Milbert, Ph.D. and Dru A. Smith, Ph.D helpful. This is
+available at L<http://www.ngs.noaa.gov/PUBS_LIB/gislis96.html>. This
+paper states that the difference between ellipsoid and geoid heights
+ranges between -75 and +100 meters globally, and between -53 and -8
+meters in "the conterminous United States."
+
 B<Caveat:> This module relies on the documented behavior of the
 above-referred-to USGS web service, as well as certain undocumented but
 observed behaviors and the proper functioning of the USGS' hardware and
@@ -71,7 +90,7 @@ use Params::Util 0.11 qw{_INSTANCE};
 use Scalar::Util qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.003_02';
+our $VERSION = '0.003_03';
 
 use constant BEST_DATA_SET => -1;
 
