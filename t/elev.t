@@ -530,6 +530,8 @@ SKIP: {
     is($rslt->[0]{Elevation}, $ele_mt, "$kind elevation is $ele_mt");
 }
 
+_skip_on_server_summary();
+
 # I need to mung the argument list before use because the idea is to
 # call this with an indication of whether to skip the whole test and
 # a reason for skipping. The first argument may be computed inside an
@@ -547,17 +549,31 @@ sub _skip_it {
     return $check;
 }
 
-sub _skip_on_server_error {
-    my ($ele, $how_many) = @_;
-    local $_ = $ele->get('error') or return;
-    (m/^5\d\d\b/ ||
-	m/^ERROR: No Elevation values were returned/i ||
-	m/^ERROR: No Elevation value was returned/i ||
-	m/System\.Web\.Services\.Protocols\.SoapException/i
-    ) or return;
-    my ($pkg, $file, $line) = caller(0);
-    diag("Skipping $how_many tests: $_ at $file line $line");
-    return skip ($_, $how_many);
+{
+    my $skips;
+
+    sub _skip_on_server_error {
+	my ($ele, $how_many) = @_;
+	local $_ = $ele->get('error') or return;
+	(m/^5\d\d\b/ ||
+	    m/^ERROR: No Elevation values were returned/i ||
+	    m/^ERROR: No Elevation value was returned/i ||
+	    m/System\.Web\.Services\.Protocols\.SoapException/i
+	) or return;
+	$skips += $how_many;
+	my ($pkg, $file, $line) = caller(0);
+	diag("Skipping $how_many tests: $_ at $file line $line");
+	return skip ($_, $how_many);
+    }
+
+    sub _skip_on_server_summary {
+	$skips and diag(<<eod);
+
+Skipped $skips tests due to apparent server errors.
+
+eod
+    }
+
 }
 
 sub Geo::Point::latlong {
