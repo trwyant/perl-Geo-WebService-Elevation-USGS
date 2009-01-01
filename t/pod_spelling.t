@@ -22,8 +22,15 @@ all_pod_files_spelling_ok ();
 __DATA__
 CONUS
 CUBITS
+Dru
+GEOID
+Geoid
 IDs
 InvalidCastException
+Milbert
+NAD
+NAVD
+NED
 Survey's
 USGS
 WGS
@@ -33,4 +40,7 @@ geo
 getAllElevations
 getElevation
 targetNamespace
+conterminous
+geoid
+gory
 url
