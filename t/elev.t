@@ -74,7 +74,7 @@ SKIP: {
     _skip_on_server_error($ele, 2);
     ok(!$@, 'getElevation does not fail when data has bad extent')
 	or diag($@);
-    ok(!$ele->is_valid($rslt->{Elevation}),
+    ok(!$ele->is_valid($rslt),
 	'getElevation does not return a valid elevation when given a bad extent');
 }
 $ele->set(source => []);
@@ -256,7 +256,10 @@ SKIP: {
 	);
 	$rslt = eval {$bogus->elevation(38.898748, -77.037684)};
 	_skip_on_server_error($bogus, 2);
-	ok(!$bogus->get('error'),
+	my $err = $bogus->get('error');
+	$err =~ m/Input Source Layer was invalid/i
+	    and skip($err, 2);
+	ok(!$err,
 	    'Query of SRTM.SA_3_ELEVATION still is not an error')
 	    or diag($bogus->get('error'));
 	ok(!$bogus->is_valid($rslt->[0]),
@@ -548,7 +551,9 @@ sub _skip_on_server_error {
     my ($ele, $how_many) = @_;
     local $_ = $ele->get('error') or return;
     (m/^5\d\d\b/ ||
-	m/^ERROR: No Elevation values were returned from servers\./
+	m/^ERROR: No Elevation values were returned/i ||
+	m/^ERROR: No Elevation value was returned/i ||
+	m/System\.Web\.Services\.Protocols\.SoapException/i
     ) or return;
     my ($pkg, $file, $line) = caller(0);
     diag("Skipping $how_many tests: $_ at $file line $line");
