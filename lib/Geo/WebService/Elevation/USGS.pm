@@ -90,7 +90,7 @@ use Params::Util 0.11 qw{_INSTANCE};
 use Scalar::Util qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.003_04';
+our $VERSION = '0.003_05';
 
 use constant BEST_DATA_SET => -1;
 
@@ -243,7 +243,7 @@ that this may result in an empty array.
 	    sub {$_[1]->($_[0], $_[2])}
 	},
 	HASH => sub {%{$_[0]} ?
-	    sub {delete $_[1]{$_[2]{Data_ID}}} :
+	    sub {delete $_[1]{_normalize_id($_[2]{Data_ID})}} :
 	    sub {1}
 	},
 	Regexp => sub {
@@ -657,9 +657,7 @@ sub _error {
 
 sub _get_bad_extent_hash {
     my $self = shift;
-    my $id = _normalize_id(shift);
-    my $src = $self->_get_source_name($id)
-	or return;
+    my ($id, $src) = $self->_get_source_info(shift) or return;
     return {
 	Data_Source => $src,
 	Data_ID	=> $id,
@@ -731,24 +729,30 @@ sub _get_source_cache {
     };
 }
 
-#	$name = $self->_get_source_name($data_id);
+#	($id, $name) = $self->_get_source_info($data_id);
 #
-#	This subroutine returns the data source name for the given
-#	Data_ID. The input id is expected to have already been
-#	normalized.
+#	This subroutine returns id in canonical case and the data source
+#	name for the given Data_ID. If called in scalar context, a
+#	reference to the array is returned. If the given data source can
+#	not be found, we simply return (i.e. undef in list context and
+#	an empty array in scalar context).
 
 {
     my %name;
 
-    sub _get_source_name {
+    sub _get_source_info {
 	my ($self, $id) = @_;
+	$id = _normalize_id($id);
 	unless (%name) {
 	    foreach my $data (@{$self->getAllElevations(40, -90)}) {
-		$name{_normalize_id($data->{Data_ID})} =
-		    $data->{Data_Source};
+		$name{_normalize_id($data->{Data_ID})} = [
+		    $data->{Data_ID},
+		    $data->{Data_Source},
+		];
 	    }
 	}
-	return $name{$id};
+	return unless $name{$id};
+	return wantarray ? @{$name{$id}} : $name{$id};
     }
 }
 
