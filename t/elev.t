@@ -71,11 +71,28 @@ SKIP: {
 SKIP: {
     $rslt = eval {
 	$ele->getElevation(38.898748, -77.037684, 'SRTM.C_SA_3', 1)};
+
     _skip_on_server_error($ele, 2);
     ok(!$@, 'getElevation does not fail when data has bad extent')
 	or diag($@);
     ok(!$ele->is_valid($rslt),
 	'getElevation does not return a valid elevation when given a bad extent');
+
+=begin comment
+
+#	This code represents behavior if we are allowing the behavior of
+#	the USGS web server in this case to be visible to the caller. I
+#	decided not to do this even though changes made in the service
+#	on or about 1-Jan-2009 indicate that this is the USGS' intent.
+
+    ok($@, 'getElevation fails when data has bad extent');
+    like($@, qr{ERROR: No Elevation value was returned from servers\.}i,
+	'getElevation returns expected message when data has bad extent');
+
+=end comment
+
+=cut
+
 }
 $ele->set(source => []);
 is(ref ($ele->get('source')), 'ARRAY', 'Source can be set to an array ref');

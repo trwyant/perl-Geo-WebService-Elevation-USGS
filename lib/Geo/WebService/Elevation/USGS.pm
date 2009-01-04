@@ -55,10 +55,10 @@ but there are a couple cases where I felt forced into it.
 First, the documentation says that if a point is not in a requested
 source data set, the returned elevation will be -1.79769313486231E+308.
 In practice, the getAllElevations web service returns 'BAD_EXTENT' in
-this case, and the getElevation web service returns an error on the
-attempt to convert 'BAD_EXTENT' to a number. This affects the behavior
-of the is_valid() method, but more importantly it convinced me to try to
-convert the getElevation web service error back into a successful call
+this case, and the getElevation web service returns error 'ERROR: No
+Elevation value was returned from servers.' This affects the behavior of
+the is_valid() method, but more importantly it convinced me to try to
+convert the corresponding getElevation error back into a successful call
 of the getElevation() method, returning 'BAD_EXTENT' as the elevation.
 
 Second, experimentation shows that, although the source IDs are
@@ -90,7 +90,7 @@ use Params::Util 0.11 qw{_INSTANCE};
 use Scalar::Util qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.003_03';
+our $VERSION = '0.003_04';
 
 use constant BEST_DATA_SET => -1;
 
@@ -173,11 +173,7 @@ GetElevation().
 
 If the 'source' is any other scalar, getElevation() is called to get the
 named data set. The result is an array (or array reference) whose sole
-element is the hash returned by GetElevation().  The USGS code handling
-this request seems to be badly behaved if the requested data set does
-not cover the given position, but this package attempts to deal with
-this by turning their error into a successful return with elevation
-'BAD_EXTENT'.
+element is the hash returned by GetElevation().
 
 If the 'source' is a reference to an empty array or an empty hash,
 getAllElevations() is called, and its output (or a reference to it) is
@@ -261,6 +257,7 @@ that this may result in an empty array.
 	my $ref = ref (my $source = $self->_get_source());
 	my $rslt;
 	if ($ref eq 'ARRAY') {
+####	    $self->_supress_no_value_err(\$ref);
 	    $rslt = [];
 	    foreach (@$source) {
 		push @$rslt, $self->getElevation($lat, $lon, $_);
@@ -317,7 +314,8 @@ representing the individual data sets. Each data set hash is structured
 like the one returned by getElevation(). If a failure occurs, the method
 will croak if the 'croak' attribute is true, or return undef otherwise.
 The arguments are WGS84 latitude and longitude, in degrees, with south
-latitude and west longitude being negative.
+latitude and west longitude being negative. The elevations returned are
+NAVD88 elevations.
 
 You can also pass a Geo::Point, GPS::Point, or Net::GPSD::Point object
 in lieu of the $lat and $lon arguments.
@@ -327,11 +325,6 @@ still appear in the output, but the Elevation will either be a
 non-numeric value (e.g. 'BAD_EXTENT', though this is nowhere documented
 that I can find), or a very large negative number (documented as
 -1.79769313486231E+308).
-
-B<Caveat:> The USGS includes source 'SRTM.C_US_1' twice in the data
-provided to this method. They are not duplicates because for latitude 40
-longitude -90 one returns an elevation (600.39...) and the other returns
-BAD_EXTENT.
 
 =cut
 
@@ -380,10 +373,10 @@ sub getAllElevations {
 
 This method executes the getElevation query, requesting elevation for
 the given WGS84 latitude and longitude (in degrees, with south latitude
-and west longitude being negative) from the source data set. If a
-failure occurs, the method will croak if the 'croak' attribute is true,
-or return undef otherwise. Either way, the error if any will be
-available in the 'error' attribute.
+and west longitude being negative) from the source data set. The
+returned elevation is NAVD88. If a failure occurs, the method will croak
+if the 'croak' attribute is true, or return undef otherwise. Either way,
+the error if any will be available in the 'error' attribute.
 
 You can also pass a Geo::Point, GPS::Point, or Net::GPSD::Point object
 in lieu of the $lat and $lon arguments. If you do this, $source becomes
@@ -391,7 +384,11 @@ the second argument, rather than the third, and $elevation_only becomes
 the third argument rather than the fourth.
 
 If the $source argument is omitted, undef, or -1, data comes from the
-'best' data set for the given position.
+'best' data set for the given position. If the $source argument begins
+with an asterisk ('*') you get data from the 'best' data set whose name
+matches the given name. In either case, you get an error (not success
+with an invalid {Elevation}) if the given position is not covered by any
+of the selected data sets.
 
 The $elevation_only argument is optional. If provided and true (in the
 Perl sense) it causes the return on success to be the numeric value of
@@ -420,16 +417,15 @@ non-numeric value (e.g. 'BAD_EXTENT', though this is nowhere documented
 that I can find), or a very large negative number (documented as
 -1.79769313486231E+308).
 
-B<Caveat:> The USGS web service upon which this code is based throws a
-type conversion error ("... System.InvalidCastException: Conversion from
-string "BAD_EXTENT" to type 'Double' is not valid. ...") if an explicit
-source was requested and the latitude and longitude are not in that
-source. This code attempts to trap this error and return a hash with
-Elevation => 'BAD_EXTENT', the way getAllElevations does, on the
-presumption that this is what the USGS code was trying to do. If the
-behavior of the USGS web service changes, the change may be visible to
-users of this software, either as an error, as an unexpected value in
-the 'Elevation' key, or some other way.
+B<Caveat:> The USGS web service upon which this code is based throws an
+error ('ERROR: No Elevation value was returned from servers.') if the
+requested latitude and longitude do not appear in the specified data
+set(s). If a specific data source name was specified, this code attempts
+to trap this error and return a hash with Elevation => 'BAD_EXTENT', the
+way getAllElevations does, in order to get more desirable behavior from
+the elevation() method. If the behavior of the USGS web service changes,
+the change may be visible to users of this software, either as an error,
+as an unexpected value in the 'Elevation' key, or some other way.
 
 B<Another caveat:> If you have not specified a data source (or if you
 have specified a 'wildcard' data source such as '-1' or anything
@@ -471,13 +467,9 @@ sub getElevation {
     if (_INSTANCE($rslt, 'SOAP::SOM') && $rslt->fault &&
 	    $rslt->faultstring =~
 	m/Conversion from string "BAD_EXTENT" to type 'Double'/) {
-	my $src = _normalize_id($source);
-	return {
-	    Data_Source => $self->_get_source_name($src),
-	    Data_ID	=> $src,
-	    Elevation	=> 'BAD_EXTENT',
-	    Units	=> $self->{units},
-	};
+	if (my $hash = $self->_get_bad_extent_hash($source)) {
+	    return $hash;
+	}
     }
 
     return $self->_digest($rslt, $source);
@@ -615,6 +607,13 @@ sub _digest {
 	    $rslt = $rslt->{$key};
 	}
 	unless (ref $rslt) {
+	    if (defined $source &&
+####		$self->_supress_no_value_err() &&
+		$rslt =~ m/ERROR:\sNo\sElevation\svalue\swas\sreturned\s
+			from\sservers\./ix &&
+		(my $hash = $self->_get_bad_extent_hash($source))) {
+		return $hash;
+	    }
 	    $rslt =~ m/[.?!]$/ or $rslt .= '.';
 	    $self->{error} = defined $source ?
 		"$rslt Source = '$source'" : $rslt;
@@ -624,7 +623,7 @@ sub _digest {
     }
     if ($self->{error}) {
 	$self->{croak} and croak $self->{error};
-	$rslt = undef;
+	return;
     }
     if ($rslt && $round) {
 	if (ref $rslt->{Elevation}) {
@@ -647,6 +646,26 @@ sub _error {
     $self->{error} = join '', @args;
     $self->{croak} and croak $self->{error};
     return;
+}
+
+#	$hash_ref = $ele->_get_bad_extent_hash($data_id);
+#
+#	Manufacture and return a data hash for the given data ID, with
+#	'BAD_EXTENT' filled in for the elevation. If the $data_id does
+#	not represent a known source, we return undef in scalar context,
+#	or an empty list in list context.
+
+sub _get_bad_extent_hash {
+    my $self = shift;
+    my $id = _normalize_id(shift);
+    my $src = $self->_get_source_name($id)
+	or return;
+    return {
+	Data_Source => $src,
+	Data_ID	=> $id,
+	Elevation	=> 'BAD_EXTENT',
+	Units	=> $self->{units},
+    };
 }
 
 #	$source => $ele->_get_source()
@@ -683,32 +702,6 @@ sub _error {
 #	attribute mutators which would (or might) cause the desired code
 #	to change should clear the cache. Inside the comments is the
 #	original code.
-
-=begin comment
-
-sub _get_source {
-    my ($self) = @_;
-    defined (my $source = $self->{source})
-	or return BEST_DATA_SET;
-    my $ref = ref $source
-	or return $source;
-    if ($ref eq 'ARRAY') {
-    } elsif ($ref eq 'HASH') {
-	$source = [sort keys %$source];
-    } else {
-	return $source;
-    }
-    @$source or return {};
-    my $limit = $self->get('use_all_limit');
-####    $limit < 0 || @$source < $limit || grep m/^\*/i, @$source
-    $limit < 0 || @$source < $limit
-	and return $source;
-    return {map {$_ => 1} @$source};
-}
-
-=end comment
-
-=cut
 
 sub _get_source {
     return ($_[0]{_source_cache} ||= _get_source_cache(@_))->();
@@ -822,6 +815,43 @@ sub _soapdish {
     eval {1};	# Clear $@.
     return $soap;
 }
+
+#	$boolean = $ele->_supress_no_value_err()
+#	or
+#	$boolean = $ele->_supress_no_value_err($value);
+#
+#	This method returns (and optionally sets) an internal attribute
+#	that causes the _digest method to return a packet with an
+#	elevation of 'BAD_EXTENT' rather than an error when it
+#	determines that getElevation has in fact encountered a bad
+#	extent.
+#
+#	If the $value is a reference, it is weakened after it is stored,
+#	which causes the internal attribute to magically become unset
+#	when the referenced variable goes out of scope.
+
+=begin comment
+
+die <<eod;
+This code requires 'weaken', which in turn requires version 1.14 of
+Scalar::Util. Without this code, Scalar::Util is unconstrained.
+Obviously, this 'die' must be removed.
+eod
+
+sub _supress_no_value_err {
+    my ($self, @args) = @_;
+    if (@args) {
+	my $value = $args[0];
+	$self->{_supress_no_value_err} = $value;
+	ref $value and weaken $self->{_supress_no_value_err};
+    }
+    return $self->{_supress_no_value_err};
+}
+
+=end comment
+
+=cut
+
 
 1;
 
@@ -960,7 +990,7 @@ Thomas R. Wyant, III; F<wyant at cpan dot org>
 
 =head1 COPYRIGHT
 
-Copyright 2008 by Thomas R. Wyant, III. All rights reserved.
+Copyright 2008, 2009 by Thomas R. Wyant, III. All rights reserved.
 
 =head1 LICENSE
 
