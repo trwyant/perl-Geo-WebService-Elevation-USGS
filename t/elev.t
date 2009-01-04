@@ -70,7 +70,7 @@ SKIP: {
 
 SKIP: {
     $rslt = eval {
-	$ele->getElevation(38.898748, -77.037684, 'SRTM.SA_3_ELEVATION', 1)};
+	$ele->getElevation(38.898748, -77.037684, 'SRTM.C_SA_3', 1)};
     _skip_on_server_error($ele, 2);
     ok(!$@, 'getElevation does not fail when data has bad extent')
 	or diag($@);
@@ -135,7 +135,7 @@ SKIP: {
 
 SKIP: {
     $ele->set(
-	source => ['NED.CONUS_NED_13E', 'NED.CONUS_NED', 'SRTM.SA_3_ELEVATION'],
+	source => ['NED.CONUS_NED_13E', 'NED.CONUS_NED', 'SRTM.C_SA_3'],
 	use_all_limit => 0,
     );
     $rslt = eval {$ele->elevation(38.898748, -77.037684)};
@@ -251,7 +251,7 @@ SKIP: {
 
     SKIP: {
 	$bogus->set(
-	    source => {'SRTM.SA_3_ELEVATION' => 1},
+	    source => {'SRTM.C_SA_3' => 1},
 	    use_all_limit => 5,
 	);
 	$rslt = eval {$bogus->elevation(38.898748, -77.037684)};
@@ -260,10 +260,10 @@ SKIP: {
 	$err =~ m/Input Source Layer was invalid/i
 	    and skip($err, 2);
 	ok(!$err,
-	    'Query of SRTM.SA_3_ELEVATION still is not an error')
+	    'Query of SRTM.C_SA_3 still is not an error')
 	    or diag($bogus->get('error'));
 	ok(!$bogus->is_valid($rslt->[0]),
-	    'SRTM.SA_3_ELEVATION still does not return a valid elevation');
+	    'SRTM.C_SA_3 still does not return a valid elevation');
     }
 
     $bogus->{_hack_result} = _get_bad_som();
