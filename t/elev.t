@@ -589,6 +589,7 @@ sub _skip_it {
 Skipped $skips tests due to apparent server errors.
 
 eod
+	return;
     }
 
 }
