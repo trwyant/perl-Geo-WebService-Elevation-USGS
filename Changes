@@ -1,6 +1,7 @@
-0.001
+0.001  09-Dec-2008
   Initial release
-0.002
+
+0.002  15-Dec-2008
   Make is_valid() croak if not passed a scalar or hash ref.
   Require Test::More 0.40 (rather than 0) and recode tests
     to conform to this.
@@ -10,8 +11,26 @@
     the version present.
   Recode Makefile.PL in a manner corresponding to Build.PL.
   Add t/executable.t and t/manifest.t to the distribution.
-0.003
+
+0.003  19-Dec-2008
   _Really_ recode Makefile.PL per above.
   Correct failure in t/pod.t when Test::Pod not available.
   Skip tests in t/elev.t when query returns a 5xx error.
   Try to pick up data from ActivePerl test failure.
+
+0.004  04-Jan-2009
+  Modify BAD_EXTENT result synthesis in getElevation(), since
+    the USGS changed the error that is generated when this
+    happens, and since they now return mixed-case {Data_ID}.
+  Modify elevation() functionality to properly compare array
+    and hash source IDs to the returned {Data_ID} when the
+    data are picked out of the results of getAllElevations().
+  Document that the elevations returned are referred to
+    NAVD88 (except Alaska, which is NAVD29).
+  Make t/elev.t more robust in the face of various server
+    errors.
+  Bring distributed code up to perlcritic --stern with
+    exceptions.
+  Distribute t/critic.t and t/perlcriticrc
+  Use Params::Util::__INSTANCE rather than eval{isa}. This
+    adds a dependency on Params::Util 0.11.
