@@ -90,7 +90,7 @@ use Params::Util 0.11 qw{_INSTANCE};
 use Scalar::Util qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.004';
+our $VERSION = '0.004_01';
 
 use constant BEST_DATA_SET => -1;
 
@@ -734,8 +734,8 @@ sub _get_source_cache {
 #	This subroutine returns id in canonical case and the data source
 #	name for the given Data_ID. If called in scalar context, a
 #	reference to the array is returned. If the given data source can
-#	not be found, we simply return (i.e. undef in list context and
-#	an empty array in scalar context).
+#	not be found, we simply return (i.e. undef in scalar context and
+#	an empty array in list context).
 
 {
     my %name;
@@ -743,16 +743,20 @@ sub _get_source_cache {
     sub _get_source_info {
 	my ($self, $id) = @_;
 	$id = _normalize_id($id);
-	unless (%name) {
-	    foreach my $data (@{$self->getAllElevations(40, -90)}) {
-		$name{_normalize_id($data->{Data_ID})} = [
-		    $data->{Data_ID},
-		    $data->{Data_Source},
-		];
-	    }
-	}
+	%name or $self->__get_source_info_hash();
 	return unless $name{$id};
 	return wantarray ? @{$name{$id}} : $name{$id};
+    }
+
+    sub __get_source_info_hash {
+	my $self = shift || __PACKAGE__->new();
+	foreach my $data (@{$self->getAllElevations(40, -90)}) {
+	    $name{_normalize_id($data->{Data_ID})} = [
+		$data->{Data_ID},
+		$data->{Data_Source},
+	    ];
+	}
+	return;
     }
 }
 
@@ -866,7 +870,7 @@ __END__
 =head3 croak (boolean)
 
 This attribute determines whether the data acquisition methods croak on
-encountering an error.
+encountering an error. If false, they return undef on an error.
 
 The default is 1 (i.e. true).
 
@@ -896,7 +900,7 @@ The default (before any queries have occurred) is undef.
 
 If this attribute is set to a non-negative integer, elevation results
 will be rounded to this number of decimal places by running them through
-sprintf '%.${places}f'.
+sprintf "%.${places}f".
 
 The default is undef.
 
