@@ -152,12 +152,17 @@ SKIP: {
 
 SKIP: {
     $ele->set(
-	source => ['NED.CONUS_NED_13E', 'NED.CONUS_NED', 'SRTM.C_SA_3'],
+##	source => ['NED.CONUS_NED_13E', 'NED.CONUS_NED', 'SRTM.C_SA_3'],
+	source => ['NED.CONUS_NED_13E', 'NED.CONUS_NED', 'NED.AK_NED'],
 	use_all_limit => 0,
     );
     $rslt = eval {$ele->elevation(38.898748, -77.037684)};
     _skip_on_server_error($ele, 7);
-    ok(!$@, 'elevation() done by iteration succeeds') or diag($@);
+    my $err = $@;
+    ok(!$err, 'elevation() done by iteration succeeds') or do {
+	diag ("Error: $err");
+	skip("Elevation by iteration failed: $err", 6);
+    };
     is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '==', 3, 'elevation() returned three results');
@@ -172,7 +177,11 @@ SKIP: {
 SKIP: {
     $rslt = eval {$ele->elevation(38.898748, -77.037684, 1)};
     _skip_on_server_error($ele, 7);
-    ok(!$@, 'elevation(valid) succeeds') or diag($@);
+    my $err = $@;
+    ok(!$err, 'elevation(valid) succeeds') or do {
+	diag ("Error: $err");
+	skip("Elevation(valid) failed: $err", 6);
+    };
     is(ref $rslt, 'ARRAY', 'elevation(valid) still returns an array');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '==', 2, 'elevation(valid) returned two results')
