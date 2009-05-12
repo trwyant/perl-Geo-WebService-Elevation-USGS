@@ -12,6 +12,7 @@ my %args = (
     VERSION_FROM => 'lib/Geo/WebService/Elevation/USGS.pm',
     PREREQ_PM => {
 	'Params::Util'	=> 0.11,
+	'Scalar::Util'	=> 1.10,
 	'SOAP::Lite'	=> 0,
     },
     PL_FILES => {},	# Prevent old MakeMaker from running Build.PL

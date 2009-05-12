@@ -16,6 +16,7 @@ my %args = (
     },
     requires => {
 	'Params::Util' => 0.11,
+	'Scalar::Util' => 1.10,
 	'SOAP::Lite' => 0,
     },
     license => 'perl',

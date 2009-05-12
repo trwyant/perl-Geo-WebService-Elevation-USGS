@@ -87,10 +87,10 @@ use warnings;
 
 use Carp;
 use Params::Util 0.11 qw{_INSTANCE};
-use Scalar::Util qw{looks_like_number};
+use Scalar::Util 1.10 qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.004_01';
+our $VERSION = '0.004_02';
 
 use constant BEST_DATA_SET => -1;
 
