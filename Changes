@@ -1,22 +1,12 @@
-0.001  09-Dec-2008
-  Initial release
-
-0.002  15-Dec-2008
-  Make is_valid() croak if not passed a scalar or hash ref.
-  Require Test::More 0.40 (rather than 0) and recode tests
-    to conform to this.
-  Log all net errors encountered during tests, to try to
-    diagnose test failures.
-  Recode Build.PL to configure the use of Module::Build to
-    the version present.
-  Recode Makefile.PL in a manner corresponding to Build.PL.
-  Add t/executable.t and t/manifest.t to the distribution.
-
-0.003  19-Dec-2008
-  _Really_ recode Makefile.PL per above.
-  Correct failure in t/pod.t when Test::Pod not available.
-  Skip tests in t/elev.t when query returns a 5xx error.
-  Try to pick up data from ActivePerl test failure.
+0.005 12-May-2009 T. R. Wyant
+  Restructure Geo::WebService::Elevation::USGS
+    Data_ID-to-Data_Source code.
+  Tweak Geo::WebService::Elevation::USGS docs.
+  Specifically require Scalar::Util 1.10, since we use
+    looks_like_number().
+  Use NED.AK_NED for 'bad extent' testing in t/elev.t, since
+    SRTM.C_SA_3 is AWOL.
+  Use only core Perl::Critic modules in t/critic.t.
 
 0.004  04-Jan-2009
   Modify BAD_EXTENT result synthesis in getElevation(), since
@@ -34,3 +24,23 @@
   Distribute t/critic.t and t/perlcriticrc
   Use Params::Util::__INSTANCE rather than eval{isa}. This
     adds a dependency on Params::Util 0.11.
+
+0.003  19-Dec-2008
+  _Really_ recode Makefile.PL per above.
+  Correct failure in t/pod.t when Test::Pod not available.
+  Skip tests in t/elev.t when query returns a 5xx error.
+  Try to pick up data from ActivePerl test failure.
+
+0.002  15-Dec-2008
+  Make is_valid() croak if not passed a scalar or hash ref.
+  Require Test::More 0.40 (rather than 0) and recode tests
+    to conform to this.
+  Log all net errors encountered during tests, to try to
+    diagnose test failures.
+  Recode Build.PL to configure the use of Module::Build to
+    the version present.
+  Recode Makefile.PL in a manner corresponding to Build.PL.
+  Add t/executable.t and t/manifest.t to the distribution.
+
+0.001  09-Dec-2008
+  Initial release
