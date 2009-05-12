@@ -90,7 +90,7 @@ use Params::Util 0.11 qw{_INSTANCE};
 use Scalar::Util 1.10 qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.004_02';
+our $VERSION = '0.005';
 
 use constant BEST_DATA_SET => -1;
 
