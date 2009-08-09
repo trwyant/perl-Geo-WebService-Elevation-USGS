@@ -28,6 +28,7 @@ $mmv >= 6.4501 and $args{META_MERGE} = {
 	'Test::More' => 0.40,
     },
     resources => {
+	bugtracker => 'https://rt.cpan.org/Public/Dist/Display.html?Name=Geo-WebService-Elevation-USGS',
 	license => 'http://dev.perl.org/licenses/',
     },
 };

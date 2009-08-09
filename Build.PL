@@ -26,6 +26,9 @@ $mbv >= 0.28 and $args{meta_merge} = {
     no_index => {
 	directory => [qw{inc t}],
     },
+    resources => {
+	bugtracker => 'https://rt.cpan.org/Public/Dist/Display.html?Name=Geo-WebService-Elevation-USGS',
+    },
 };
 
 my $bldr = Module::Build->new (%args);
