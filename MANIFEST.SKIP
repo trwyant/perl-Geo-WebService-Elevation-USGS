@@ -6,7 +6,7 @@
 ^Changes_Development$
 ^cover_db/
 CVS/
-.DS_Store$
+\.DS_Store$
 ^foo
 ^Geo-WebService-Elevation-USGS
 ^html/
@@ -18,5 +18,4 @@ CVS/
 ^pod2htm.\.tmp$
 .svn/
 \.swp$
-^t/pod_spelling\.t$
 ^TODO$

@@ -3,6 +3,9 @@ use 5.008;
 use strict;
 use warnings;
 
+use lib qw{ inc };
+
+use Geo::WebService::Elevation::USGS::Build;
 use Module::Build;
 
 (my $mbv = Module::Build->VERSION) =~ s/_//g;
@@ -34,6 +37,6 @@ $mbv >= 0.28 and $args{meta_merge} = {
 $mbv >= 0.34
     and $args{auto_configure_requires} = 0;	# Don't require Module::Build
 
-my $bldr = Module::Build->new (%args);
+my $bldr = Geo::WebService::Elevation::USGS::Build->new (%args);
 
 $bldr->create_build_script ();
