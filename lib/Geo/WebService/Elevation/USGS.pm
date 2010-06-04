@@ -90,7 +90,7 @@ use Params::Util 0.11 qw{_INSTANCE};
 use Scalar::Util 1.10 qw{looks_like_number};
 use SOAP::Lite;
 
-our $VERSION = '0.005';
+our $VERSION = '0.005_01';
 
 use constant BEST_DATA_SET => -1;
 
@@ -272,10 +272,7 @@ that this may result in an empty array.
 	    $rslt = [grep {$check->($self, $source, $_)} @$raw];
   	    if ($ref eq 'HASH') {
 		foreach (sort keys %$source) {
-		    my $err = "Source Data_ID $_ not found";
-		    $self->get('croak') and croak $err;
-		    $self->set(error => $err);
-		    return;
+		    return $self->_error( "Source Data_ID $_ not found" );
 		}
 	    }
 	} else {
@@ -591,6 +588,8 @@ sub _digest {
 		: $_[0]}
 	}
     }
+
+    my $error;
     if (ref $rslt eq 'HASH') {
 	# The following line is because we may be handling an 'elevation
 	# only' request.
@@ -601,7 +600,7 @@ sub _digest {
 	foreach my $key (
 	    qw{USGS_Elevation_Web_Service_Query Elevation_Query}) {
 	    (ref $rslt eq 'HASH' && exists $rslt->{$key}) or do {
-		$self->{error} = "Elevation result is missing tag <$key>";
+		$error = "Elevation result is missing tag <$key>";
 		last;
 	    };
 	    $rslt = $rslt->{$key};
@@ -615,16 +614,16 @@ sub _digest {
 		return $hash;
 	    }
 	    $rslt =~ m/[.?!]$/ or $rslt .= '.';
-	    $self->{error} = defined $source ?
+	    $error = defined $source ?
 		"$rslt Source = '$source'" : $rslt;
 	}
     } else {
-	$self->{error} = "No data found in SOAP result";
+	$error = "No data found in SOAP result";
     }
-    if ($self->{error}) {
-	$self->{croak} and croak $self->{error};
-	return;
-    }
+
+    $error
+	and return $self->_error( $error );
+
     if ($rslt && $round) {
 	if (ref $rslt->{Elevation}) {
 	    $rslt->{Elevation} = [
@@ -639,12 +638,14 @@ sub _digest {
 #	$ele->_error($text);
 #
 #	Set the error attribute, and croak if the croak attribute is
-#	true. If croak is false, just return.
+#	true. If croak is false but defined, carp and return. If croak
+#	is undefined, just returned.
 
 sub _error {
     my ($self, @args) = @_;
     $self->{error} = join '', @args;
     $self->{croak} and croak $self->{error};
+    defined $self->{croak} and carp $self->{error};
     return;
 }
 
@@ -867,10 +868,14 @@ __END__
 
 =head2 Attributes
 
-=head3 croak (boolean)
+=head3 croak (boolean, sort of)
 
 This attribute determines whether the data acquisition methods croak on
-encountering an error. If false, they return undef on an error.
+encountering an error. If false, they return undef on an error. If false
+but defined, they return undef but carp.
+
+Note that in version 0.005 and earlier, the alternatives were croak if
+true, or silently return undef if false.
 
 The default is 1 (i.e. true).
 
@@ -1007,3 +1012,5 @@ modify it under the same terms as Perl itself. Please see
 L<http://perldoc.perl.org/index-licence.html> for the current licenses.
 
 =cut
+
+# ex: set textwidth=72 :

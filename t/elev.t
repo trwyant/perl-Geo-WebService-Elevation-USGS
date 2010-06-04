@@ -28,7 +28,7 @@ my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(places => 2)},
 	"Unable to access $pxy");
 }
 
-plan (tests => 144);
+plan (tests => 149);
 
 my $ele_ft = '54.70';	# Expected elevation in feet.
 my $ele_mt = '16.67';	# Expected elevation in meters.
@@ -271,7 +271,20 @@ SKIP: {
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
     ok(!$@, 'Should not throw an error on bad result if croak is false')
 	or diag($@);
+    like( $msg, qr{ \A No \s data \s found \b }smx,
+	'Should warn if croak is false but defined' );
     ok(!$rslt, 'Should return undef on bad result if croak is false');
+    like($bogus->get('error'), qr{^No data found in SOAP result},
+	'No data error when going through getAllElevations');
+
+    $msg = undef;
+    $bogus->set(croak => undef);
+    $bogus->{_hack_result} = undef;
+    $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
+    ok(!$@, 'Should not throw an error on bad result if croak is undef')
+	or diag($@);
+    ok( ! defined $msg, 'Should not warn if croak is undef' );
+    ok(!$rslt, 'Should return undef on bad result if croak is undef');
     like($bogus->get('error'), qr{^No data found in SOAP result},
 	'No data error when going through getAllElevations');
 
