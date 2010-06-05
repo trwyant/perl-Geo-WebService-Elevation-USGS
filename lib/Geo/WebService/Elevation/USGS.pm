@@ -510,6 +510,7 @@ sub set {
 	    or croak "No such attribute as '$attr'";
 	$mutator{$attr}->($self, $attr, shift @args);
     }
+    delete $self->{_soapdish};
     return $self;
 }
 
@@ -807,10 +808,12 @@ sub _normalize_id {return uc $_[0]}
 
 sub _soapdish {
     my $self = shift;
+    $self->{error} = undef;
+    eval {1};	# Clear $@.
+    $self->{trace} and SOAP::Trace->import ('all');
+    $self->{_soapdish} and return $self->{_soapdish};
     my $conn = '';	# Other possibility is '#'.
     my $act = sub {join $conn, @_};
-    $self->{error} = undef;
-    $self->{trace} and SOAP::Trace->import ('all');
     my $soap = SOAP::Lite->can ('default_ns') ?
 	SOAP::Lite
 	    ->default_ns ($self->{default_ns})
@@ -821,8 +824,7 @@ sub _soapdish {
 	    ->on_action ($act)
 	    ->uri ($self->{default_ns})
 	    ->proxy ($self->{proxy}, timeout => $self->{timeout});
-    eval {1};	# Clear $@.
-    return $soap;
+    return ( $self->{_soapdish} = $soap );
 }
 
 #	$boolean = $ele->_supress_no_value_err()
