@@ -333,6 +333,9 @@ sub getAllElevations {
     my $raw = exists $self->{_hack_result} ?
 	delete $self->{_hack_result} :
 	eval {
+
+	local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
+
 	$soap->call (SOAP::Data->name ('getAllElevations')->attr (
 		{xmlns => $self->{default_ns}}) =>
 	    SOAP::Data->new(name => 'X_Value', type => 'string',
@@ -444,6 +447,9 @@ sub getElevation {
     my $rslt = exists $self->{_hack_result} ?
 	delete $self->{_hack_result} :
 	eval {
+
+	local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
+
 	$soap->call(SOAP::Data->name ('getElevation')->attr (
 		{xmlns => $self->{default_ns}}) =>
 	    SOAP::Data->new(name => 'X_Value', type => 'string',
@@ -502,16 +508,30 @@ result in an exception being thrown.
 
 =cut
 
-sub set {
-    my ($self, @args) = @_;
-    while (@args) {
-	my $attr = shift @args;
-	exists $mutator{$attr}
-	    or croak "No such attribute as '$attr'";
-	$mutator{$attr}->($self, $attr, shift @args);
+
+{
+
+    my %clean_soapdish;	# Attributes that are used in _soapdish();
+
+    sub set {
+	my ($self, @args) = @_;
+	my $clean;
+	while (@args) {
+	    my ( $name, $val ) = splice @args, 0, 2;
+	    exists $mutator{$name}
+		or croak "No such attribute as '$name'";
+	    $mutator{$name}->( $self, $name, $val );
+	    $clean ||= $clean_soapdish{$name};
+	}
+	$clean and delete $self->{_soapdish};
+	return $self;
     }
-    delete $self->{_soapdish};
-    return $self;
+
+    sub _set_clean_soapdish {
+	%clean_soapdish = map { $_ => 1 } @_;
+	return;
+    }
+
 }
 
 sub _set_integer {
@@ -805,6 +825,8 @@ sub _normalize_id {return uc $_[0]}
 #
 #	We also set the error attribute and $@ to undef in preparation
 #	for a query.
+
+_set_clean_soapdish( qw{ default_ns proxy timeout } );
 
 sub _soapdish {
     my $self = shift;
