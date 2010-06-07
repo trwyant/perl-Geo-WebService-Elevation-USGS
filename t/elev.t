@@ -266,24 +266,24 @@ SKIP: {
     like($@, qr{^No data found in SOAP result},
 	'No data error when going through getAllElevations');
 
-    $bogus->set(croak => 0);
+    $bogus->set(croak => 0, carp => 1);
     $bogus->{_hack_result} = undef;
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
     ok(!$@, 'Should not throw an error on bad result if croak is false')
 	or diag($@);
     like( $msg, qr{ \A No \s data \s found \b }smx,
-	'Should warn if croak is false but defined' );
+	'Should warn if croak is false but carp is true' );
     ok(!$rslt, 'Should return undef on bad result if croak is false');
     like($bogus->get('error'), qr{^No data found in SOAP result},
 	'No data error when going through getAllElevations');
 
     $msg = undef;
-    $bogus->set(croak => undef);
+    $bogus->set(carp => 0);
     $bogus->{_hack_result} = undef;
     $rslt = eval {$bogus->elevation(38.898748, -77.037684)};
-    ok(!$@, 'Should not throw an error on bad result if croak is undef')
+    ok(!$@, 'Should not throw an error on bad result if croak is false')
 	or diag($@);
-    ok( ! defined $msg, 'Should not warn if croak is undef' );
+    ok( ! defined $msg, 'Should not warn if carp is false' );
     ok(!$rslt, 'Should return undef on bad result if croak is undef');
     like($bogus->get('error'), qr{^No data found in SOAP result},
 	'No data error when going through getAllElevations');

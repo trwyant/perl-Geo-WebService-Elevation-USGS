@@ -108,6 +108,7 @@ sub new {
     $class or croak "No class name specified";
     shift;
     my $self = {
+	carp	=> 0,
 	croak	=> 1,
 	default_ns	=> 'http://gisdata.usgs.gov/XMLWebServices2/',
 	error	=> undef,
@@ -127,6 +128,7 @@ sub new {
 
 my %mutator = (
     croak	=> \&_set_literal,
+    carp	=> \&_set_literal,
     default_ns	=> \&_set_literal,
     error	=> \&_set_literal,,
     places	=> \&_set_integer_or_undef,
@@ -659,14 +661,14 @@ sub _digest {
 #	$ele->_error($text);
 #
 #	Set the error attribute, and croak if the croak attribute is
-#	true. If croak is false but defined, carp and return. If croak
-#	is undefined, just returned.
+#	true. If croak is false, just return, carping if the carp
+#	attribute is true.
 
 sub _error {
     my ($self, @args) = @_;
     $self->{error} = join '', @args;
     $self->{croak} and croak $self->{error};
-    defined $self->{croak} and carp $self->{error};
+    $self->{carp} and carp $self->{error};
     return;
 }
 
@@ -892,14 +894,21 @@ __END__
 
 =head2 Attributes
 
-=head3 croak (boolean, sort of)
+=head3 carp (boolean)
+
+This boolean attribute determines whether the data acquisition methods carp on
+encountering an error. If false, they silently return undef. Note,
+though, that the L<croak|/croak> attribute trumps this one.
+
+This attribute was introduced in Geo::WebService::Elevation::USGS
+version 0.005_01.
+
+The default is 0 (i.e. false).
+
+=head3 croak (boolean)
 
 This attribute determines whether the data acquisition methods croak on
-encountering an error. If false, they return undef on an error. If false
-but defined, they return undef but carp.
-
-Note that in version 0.005 and earlier, the alternatives were croak if
-true, or silently return undef if false.
+encountering an error. If false, they return undef on an error.
 
 The default is 1 (i.e. true).
 
