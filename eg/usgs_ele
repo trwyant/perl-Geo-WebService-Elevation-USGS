@@ -7,8 +7,12 @@ use strict;
 use warnings;
 
 use Geo::WebService::Elevation::USGS;
+
 BEGIN {
-    eval {use Time::HiRes qw{time alarm sleep}};
+    eval {
+	require Time::HiRes;
+	Time::HiRes->import( qw{time alarm sleep} );
+    };
 }
 
 # Output is by whatever dumper is available.
@@ -120,7 +124,9 @@ help - display this text;
 new - create a new Geo::WebService::Elevation::USGS object;
 set name value - Set the named attribute to the given
     value;
-sources - set source attribute to array of arguments.
+sources - set source attribute to array of arguments;
+throttle - displays or changes
+    $Geo::WebService::Elevation::USGS::THROTTLE.
 
 South latitudes and west longitudes are negative.
 
@@ -139,6 +145,14 @@ sub cmd_new {
 
 sub cmd_sources {
     return $ele->set(source => [@_]);
+}
+
+# The 'throttle' command sets the throttle time, which is the minimum
+# elapsed time between queries.
+
+sub cmd_throttle {
+    @_ and $Geo::WebService::Elevation::USGS::THROTTLE = $_[0];
+    return $Geo::WebService::Elevation::USGS::THROTTLE;
 }
 
 # ex: set textwidth=72 :

@@ -95,6 +95,35 @@ our $VERSION = '0.005_01';
 use constant BAD_EXTENT => 'BAD_EXTENT';
 use constant BEST_DATA_SET => -1;
 
+my $sleep;
+{
+    our $THROTTLE;
+    my $mark;
+    if ( eval {
+	    require Time::HiRes;
+	    Time::HiRes->can( 'time' ) && Time::HiRes->can( 'sleep' );
+	} ) {
+	$mark = Time::HiRes::time();
+	$sleep = sub {
+	    $THROTTLE and $THROTTLE > 0 or return;
+	    my $now = Time::HiRes::time();
+	    $mark and $now < $mark and Time::HiRes::sleep( $mark - $now );
+	    $mark = $now + $THROTTLE;
+	    return;
+	};
+    } else {
+	$mark = time();
+	$sleep = sub {
+	    $THROTTLE and $THROTTLE > 0 or return;
+	    my $throttle = $THROTTLE < 1 ? 1 : $THROTTLE;
+	    my $now = time();
+	    $mark and $now < $mark and sleep( $mark - $now );
+	    $mark = $now + $throttle;
+	    return;
+	};
+    }
+}
+
 =head3 $eq = Geo::WebService::Elevation::USGS->new();
 
 This method instantiates a query object. If any arguments are given,
@@ -342,18 +371,20 @@ sub getAllElevations {
 	delete $self->{_hack_result} :
 	eval {
 
-	local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
+	    $sleep->();
 
-	$soap->call (SOAP::Data->name ('getAllElevations')->attr (
-		{xmlns => $self->{default_ns}}) =>
-	    SOAP::Data->new(name => 'X_Value', type => 'string',
-		value => $lon),
-	    SOAP::Data->new(name => 'Y_Value', type => 'string',
-		value => $lat),
-	    SOAP::Data->new(name => 'Elevation_Units', type => 'string',
-		value => $self->{units}),
-	);
-    };
+	    local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
+
+	    $soap->call (SOAP::Data->name ('getAllElevations')->attr (
+		    {xmlns => $self->{default_ns}}) =>
+		SOAP::Data->new(name => 'X_Value', type => 'string',
+		    value => $lon),
+		SOAP::Data->new(name => 'Y_Value', type => 'string',
+		    value => $lat),
+		SOAP::Data->new(name => 'Elevation_Units', type => 'string',
+		    value => $self->{units}),
+	    );
+	};
     my $cooked = $self->_digest($raw);
     ref $cooked eq 'HASH' or return;
     my @rslt;
@@ -458,22 +489,24 @@ sub getElevation {
 	delete $self->{_hack_result} :
 	eval {
 
-	local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
+	    $sleep->();
 
-	$soap->call(SOAP::Data->name ('getElevation')->attr (
-		{xmlns => $self->{default_ns}}) =>
-	    SOAP::Data->new(name => 'X_Value', type => 'string',
-		value => $lon),
-	    SOAP::Data->new(name => 'Y_Value', type => 'string',
-		value => $lat),
-	    SOAP::Data->new(name => 'Source_Layer', type => 'string', 
-		value => $source),
-	    SOAP::Data->new(name => 'Elevation_Units', type => 'string',
-		value => $self->{units}),
-	    SOAP::Data->new(name => 'Elevation_Only', type => 'string',
-		value => $only ? 'true' : 'false'),
-	);
-    };
+	    local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
+
+	    $soap->call(SOAP::Data->name ('getElevation')->attr (
+		    {xmlns => $self->{default_ns}}) =>
+		SOAP::Data->new(name => 'X_Value', type => 'string',
+		    value => $lon),
+		SOAP::Data->new(name => 'Y_Value', type => 'string',
+		    value => $lat),
+		SOAP::Data->new(name => 'Source_Layer', type => 'string', 
+		    value => $source),
+		SOAP::Data->new(name => 'Elevation_Units', type => 'string',
+		    value => $self->{units}),
+		SOAP::Data->new(name => 'Elevation_Only', type => 'string',
+		    value => $only ? 'true' : 'false'),
+	    );
+	};
 
     $@ and return $self->_digest($rslt, $source);
 
@@ -1028,6 +1061,34 @@ getElevation() to be used whenever the 'source' array or hash has any
 entries at all, no matter how many it has.
 
 The default is 5, which was chosen based on timings of the two methods.
+
+=head2 Globals
+
+=head3 $Geo::WebService::Elevation:USGS::THROTTLE
+
+If set to a positive number, this symbol limits the rate at which
+queries can be issued. The value represents the minimum interval between
+queries (in seconds), which is enforced by having the query methods
+C<sleep()> as needed. This minimum is enforced among objects, not just
+within a single object.
+
+If L<Time::HiRes|Time::HiRes> can be loaded, its C<time()> and
+C<sleep()> will be used, and fractional minimum intervals can be
+specified. If it can not be loaded, the core C<time()> and C<sleep()>
+will be used. With the core functions, the resolution is a second, and
+a C<$THROTTLE> value between 0 and 1 will be taken to be 1.
+
+The behavior of this functionality when C<$THROTTLE> is set to a
+non-numeric value is undefined. In practice, you will probably get an
+error of some sort when you issue the query, but the author makes no
+commitments. Same for quasi-numbers such as C<Inf> and C<NaN>.
+
+The default is C<undef>, which means that this functionality is
+disabled.
+
+This functionality should be considered experimental, and it may be
+revoked, possibly without notice, if either the functionality or this
+particular implementation of it are seen to be a bad idea.
 
 =head1 ACKNOWLEDGMENTS
 
