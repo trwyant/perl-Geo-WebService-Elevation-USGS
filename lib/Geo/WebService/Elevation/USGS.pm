@@ -92,7 +92,6 @@ use SOAP::Lite;
 
 our $VERSION = '0.005_01';
 
-use constant BAD_EXTENT => 'BAD_EXTENT';
 use constant BEST_DATA_SET => -1;
 
 my $sleep;
@@ -142,7 +141,6 @@ sub new {
 	croak	=> 1,
 	default_ns	=> 'http://gisdata.usgs.gov/XMLWebServices2/',
 	error	=> undef,
-	exclude_bad_extent => 0,
 	places	=> undef,
 	proxy	=>
 	    'http://gisdata.usgs.gov/xmlwebservices2/elevation_service.asmx',
@@ -161,8 +159,7 @@ my %mutator = (
     croak	=> \&_set_literal,
     carp	=> \&_set_literal,
     default_ns	=> \&_set_literal,
-    error	=> \&_set_literal,
-    exclude_bad_extent => \&_set_literal,
+    error	=> \&_set_literal,,
     places	=> \&_set_integer_or_undef,
     proxy	=> \&_set_literal,
     source	=> \&_set_source,
@@ -294,11 +291,8 @@ that this may result in an empty array.
 ####	    $self->_supress_no_value_err(\$ref);
 	    $rslt = [];
 	    foreach (@$source) {
-		my $cooked = $self->getElevation($lat, $lon, $_);
+		push @$rslt, $self->getElevation($lat, $lon, $_);
 		$self->get('error') and return;
-		$self->{exclude_bad_extent}
-		    and $cooked->{Elevation} eq BAD_EXTENT
-		    or push @{ $rslt }, $cooked;
 	    }
 	} elsif ($ref) {
 	    $filter{$ref}
@@ -392,14 +386,12 @@ sub getAllElevations {
     if ($ref eq 'ARRAY') {
 	my $limit = @{$cooked->{Data_ID}} - 1;
 	foreach my $inx (0 .. (scalar @{$cooked->{Data_ID}} - 1)) {
-	    $self->{exclude_bad_extent}
-		and $cooked->{Elevation}[$inx] eq BAD_EXTENT
-		or push @rslt, {
-		    Data_Source => $cooked->{Data_Source}[$inx],
-		    Data_ID => $cooked->{Data_ID}[$inx],
-		    Elevation => $cooked->{Elevation}[$inx],
-		    Units => $cooked->{Units}[$inx],
-		};
+	    push @rslt, {
+		Data_Source => $cooked->{Data_Source}[$inx],
+		Data_ID => $cooked->{Data_ID}[$inx],
+		Elevation => $cooked->{Elevation}[$inx],
+		Units => $cooked->{Units}[$inx],
+	    };
 	}
     } elsif ($ref) {
 	return $self->_error(
@@ -974,15 +966,6 @@ or undef if no error occurred. This attribute can be set by the user,
 but will be reset by any query operation.
 
 The default (before any queries have occurred) is undef.
-
-=head4 exclude_bad_extent (boolean)
-
-If true, this attribute causes data sets having an elevation of
-'BAD_EXTENT' to be removed from the results of a call to
-C<getAllElevations()> or any call to C<elevation()> that would
-potentially return more than one result.
-
-The default is 0 (i.e. false).
 
 =head3 places (integer)
 
