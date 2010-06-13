@@ -500,7 +500,7 @@ sub getElevation {
 	    );
 	};
 
-    $@ and return $self->_digest($rslt, $source);
+    $@ and return $self->_error( $@ );
 
     if (_INSTANCE($rslt, 'SOAP::SOM') && $rslt->fault &&
 	    $rslt->faultstring =~
