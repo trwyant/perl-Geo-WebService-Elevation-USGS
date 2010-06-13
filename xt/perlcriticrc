@@ -1,3 +1,5 @@
+# >> Customized by adding allow_delegation_to entry to RequireArgUnpacking
+
 severity	= stern
 theme		= core
 
@@ -29,6 +31,7 @@ severity	= gentle
 
 [Perl::Critic::Policy::Subroutines::RequireArgUnpacking]
 
+allow_delegation_to		= _latlon
 short_subroutine_statements	= 3
 
 [Perl::Critic::Policy::Subroutines::RequireFinalReturn]

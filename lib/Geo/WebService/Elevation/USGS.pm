@@ -283,8 +283,7 @@ that this may result in an empty array.
     );
 
     sub elevation {
-	my @args = @_;
-	my ($self, $lat, $lon, $valid) = _latlon(@args);
+	my ($self, $lat, $lon, $valid) = _latlon( @_ );
 	my $ref = ref (my $source = $self->_get_source());
 	my $rslt;
 	if ($ref eq 'ARRAY') {
@@ -357,8 +356,7 @@ that I can find), or a very large negative number (documented as
 =cut
 
 sub getAllElevations {
-    my @args = @_;
-    my ($self, $lat, $lon) = _latlon(@args);
+    my ($self, $lat, $lon) = _latlon( @_ );
     my $soap = $self->_soapdish();
 
     my $raw = exists $self->{_hack_result} ?
@@ -472,8 +470,7 @@ about it.
 =cut
 
 sub getElevation {
-    my @args = @_;
-    my ($self, $lat, $lon, $source, $only) = _latlon(@args);
+    my ($self, $lat, $lon, $source, $only) = _latlon( @_ );
     defined $source or $source = BEST_DATA_SET;
     my $soap = $self->_soapdish();
 
