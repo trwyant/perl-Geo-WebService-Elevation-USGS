@@ -22,6 +22,7 @@ my %args = (
 	'Scalar::Util' => 1.10,
 	'SOAP::Lite' => 0,
     },
+    add_to_cleanup => [ qw{ xt/optionals } ],
     license => 'perl',
 );
 

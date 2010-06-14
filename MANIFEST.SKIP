@@ -20,3 +20,4 @@ CVS/
 .svn/
 \.swp$
 ^TODO$
+^xt/optionals/
