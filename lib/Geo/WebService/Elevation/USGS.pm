@@ -265,9 +265,9 @@ therefore has the same result as
 
  $ele->set(source => qr{CONUS}i);
 
-If the optional $valid argument to elevation() is specified, data with
-invalid elevations are eliminated before the array is returned. Note
-that this may result in an empty array.
+If the optional C<$valid> argument to elevation() is specified, data
+with invalid elevations are eliminated before the array is returned.
+Note that this may result in an empty array.
 
 =cut
 
@@ -338,7 +338,7 @@ sub get {
     return $self->{$attr};
 }
 
-=head3 $rslt = $eq->getAllElevations($lat, $lon);
+=head3 $rslt = $eq->getAllElevations($lat, $lon, $valid);
 
 This method executes the getAllElevations query, which returns the
 elevation of the given point as recorded in all available data sets. The
@@ -359,10 +359,14 @@ non-numeric value (e.g. 'BAD_EXTENT', though this is nowhere documented
 that I can find), or a very large negative number (documented as
 -1.79769313486231E+308).
 
+If the optional C<$valid> argument to getAllElevations() is specified,
+data with invalid elevations are eliminated before the array is
+returned. Note that this may result in an empty array.
+
 =cut
 
 sub getAllElevations {
-    my ($self, $lat, $lon) = _latlon( @_ );
+    my ($self, $lat, $lon, $valid) = _latlon( @_ );
     my $soap = $self->_soapdish();
     my $retry_limit = $self->get( 'retry' );
     my $retry = 0;
@@ -409,6 +413,9 @@ sub getAllElevations {
 	    next;
 	} else {	# One of the ActiveState MSWin32 variants seems to do this.
 	    push @rslt, $cooked;
+	}
+	if ($valid) {
+	    @rslt = grep {is_valid($_)} @rslt;
 	}
 	return \@rslt;
 
