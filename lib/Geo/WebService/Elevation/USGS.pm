@@ -144,6 +144,8 @@ sub new {
 	places	=> undef,
 	proxy	=>
 	    'http://gisdata.usgs.gov/xmlwebservices2/elevation_service.asmx',
+	retry	=> 0,
+	retry_hook => sub {},
 	source	=> BEST_DATA_SET,
 	timeout	=> 30,
 	trace	=> undef,
@@ -162,6 +164,8 @@ my %mutator = (
     error	=> \&_set_literal,
     places	=> \&_set_integer_or_undef,
     proxy	=> \&_set_literal,
+    retry	=> \&_set_unsigned_integer,
+    retry_hook	=> \&_set_hook,
     source	=> \&_set_source,
     timeout	=> \&_set_integer_or_undef,
     trace	=> \&_set_literal,
@@ -302,7 +306,9 @@ that this may result in an empty array.
 	    $rslt = [grep {$check->($self, $source, $_)} @$raw];
   	    if ($ref eq 'HASH') {
 		foreach (sort keys %$source) {
-		    return $self->_error( "Source Data_ID $_ not found" );
+		    $self->_error( "Source Data_ID $_ not found" );
+		    $self->{croak} and croak $self->{error};
+		    return;
 		}
 	    }
 	} else {
@@ -358,46 +364,64 @@ that I can find), or a very large negative number (documented as
 sub getAllElevations {
     my ($self, $lat, $lon) = _latlon( @_ );
     my $soap = $self->_soapdish();
+    my $retry_limit = $self->get( 'retry' );
+    my $retry = 0;
 
-    my $raw = exists $self->{_hack_result} ?
-	delete $self->{_hack_result} :
-	eval {
+    while ( $retry++ <= $retry_limit ) {
 
-	    $sleep->();
+	$self->{error} = undef;
+	eval {1};	# Clear $@.
 
-	    local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
+	my $raw = exists $self->{_hack_result} ?
+	    delete $self->{_hack_result} :
+	    eval {
 
-	    $soap->call (SOAP::Data->name ('getAllElevations')->attr (
-		    {xmlns => $self->{default_ns}}) =>
-		SOAP::Data->new(name => 'X_Value', type => 'string',
-		    value => $lon),
-		SOAP::Data->new(name => 'Y_Value', type => 'string',
-		    value => $lat),
-		SOAP::Data->new(name => 'Elevation_Units', type => 'string',
-		    value => $self->{units}),
-	    );
-	};
-    my $cooked = $self->_digest($raw);
-    ref $cooked eq 'HASH' or return;
-    my @rslt;
-    my $ref = ref $cooked->{Data_ID};
-    if ($ref eq 'ARRAY') {
-	my $limit = @{$cooked->{Data_ID}} - 1;
-	foreach my $inx (0 .. (scalar @{$cooked->{Data_ID}} - 1)) {
-	    push @rslt, {
-		Data_Source => $cooked->{Data_Source}[$inx],
-		Data_ID => $cooked->{Data_ID}[$inx],
-		Elevation => $cooked->{Elevation}[$inx],
-		Units => $cooked->{Units}[$inx],
+		$sleep->();
+
+		local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
+
+		$soap->call (SOAP::Data->name ('getAllElevations')->attr (
+			{xmlns => $self->{default_ns}}) =>
+		    SOAP::Data->new(name => 'X_Value', type => 'string',
+			value => $lon),
+		    SOAP::Data->new(name => 'Y_Value', type => 'string',
+			value => $lat),
+		    SOAP::Data->new(name => 'Elevation_Units', type => 'string',
+			value => $self->{units}),
+		);
 	    };
+	my $cooked = $self->_digest($raw);
+	ref $cooked eq 'HASH' or next;
+	my @rslt;
+	my $ref = ref $cooked->{Data_ID};
+	if ($ref eq 'ARRAY') {
+	    my $limit = @{$cooked->{Data_ID}} - 1;
+	    foreach my $inx (0 .. (scalar @{$cooked->{Data_ID}} - 1)) {
+		push @rslt, {
+		    Data_Source => $cooked->{Data_Source}[$inx],
+		    Data_ID => $cooked->{Data_ID}[$inx],
+		    Elevation => $cooked->{Elevation}[$inx],
+		    Units => $cooked->{Units}[$inx],
+		};
+	    }
+	} elsif ($ref) {
+	    $self->_error( "Unexpected $ref reference in {Data_ID}" );
+	    next;
+	} else {	# One of the ActiveState MSWin32 variants seems to do this.
+	    push @rslt, $cooked;
 	}
-    } elsif ($ref) {
-	return $self->_error(
-	    "Unexpected $ref reference in {Data_ID}");
-    } else {	# One of the ActiveState MSWin32 variants seems to do this.
-	push @rslt, $cooked;
+	return \@rslt;
+
+    } continue {
+
+	$retry <= $retry_limit
+	    and $self->get( 'retry_hook' )->( $self, $retry,
+	    getAllElevations => $lat, $lon );
+
     }
-    return \@rslt;
+
+    $self->{croak} and croak $self->{error};
+    return;
 }
 
 =head3 $rslt = $eq->getElevation($lat, $lon, $source, $elevation_only);
@@ -473,41 +497,64 @@ sub getElevation {
     my ($self, $lat, $lon, $source, $only) = _latlon( @_ );
     defined $source or $source = BEST_DATA_SET;
     my $soap = $self->_soapdish();
+    my $retry_limit = $self->get( 'retry' );
+    my $retry = 0;
 
-    my $rslt = exists $self->{_hack_result} ?
-	delete $self->{_hack_result} :
-	eval {
+    while ( $retry++ <= $retry_limit ) {
 
-	    $sleep->();
+	$self->{error} = undef;
+	eval {1};	# Clear $@.
 
-	    local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
+	my $rslt = exists $self->{_hack_result} ?
+	    delete $self->{_hack_result} :
+	    eval {
 
-	    $soap->call(SOAP::Data->name ('getElevation')->attr (
-		    {xmlns => $self->{default_ns}}) =>
-		SOAP::Data->new(name => 'X_Value', type => 'string',
-		    value => $lon),
-		SOAP::Data->new(name => 'Y_Value', type => 'string',
-		    value => $lat),
-		SOAP::Data->new(name => 'Source_Layer', type => 'string', 
-		    value => $source),
-		SOAP::Data->new(name => 'Elevation_Units', type => 'string',
-		    value => $self->{units}),
-		SOAP::Data->new(name => 'Elevation_Only', type => 'string',
-		    value => $only ? 'true' : 'false'),
-	    );
+		$sleep->();
+
+		local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
+
+		$soap->call(SOAP::Data->name ('getElevation')->attr (
+			{xmlns => $self->{default_ns}}) =>
+		    SOAP::Data->new(name => 'X_Value', type => 'string',
+			value => $lon),
+		    SOAP::Data->new(name => 'Y_Value', type => 'string',
+			value => $lat),
+		    SOAP::Data->new(name => 'Source_Layer', type => 'string', 
+			value => $source),
+		    SOAP::Data->new(name => 'Elevation_Units', type => 'string',
+			value => $self->{units}),
+		    SOAP::Data->new(name => 'Elevation_Only', type => 'string',
+			value => $only ? 'true' : 'false'),
+		);
+	    };
+
+	$@ and do {
+	    $self->_error( $@ );
+	    next;
 	};
 
-    $@ and return $self->_error( $@ );
-
-    if (_INSTANCE($rslt, 'SOAP::SOM') && $rslt->fault &&
-	    $rslt->faultstring =~
-	m/Conversion from string "BAD_EXTENT" to type 'Double'/) {
-	if (my $hash = $self->_get_bad_extent_hash($source)) {
-	    return $hash;
+	if (_INSTANCE($rslt, 'SOAP::SOM') && $rslt->fault &&
+		$rslt->faultstring =~
+	    m/Conversion from string "BAD_EXTENT" to type 'Double'/) {
+	    if (my $hash = $self->_get_bad_extent_hash($source)) {
+		return $hash;
+	    }
 	}
+
+	my $info = $self->_digest( $rslt, $source ) or next;
+	return $info;
+
+    } continue {
+
+	$retry <= $retry_limit
+	    and $self->get( 'retry_hook' )->( $self, $retry,
+	    getElevation => $lat, $lon, $source, $only );
+
     }
 
-    return $self->_digest($rslt, $source);
+    $self->{croak} and croak $self->{error};
+    return;
+
 }
 
 =head3 $boolean = $eq->is_valid($elevation);
@@ -566,6 +613,13 @@ result in an exception being thrown.
 
 }
 
+sub _set_hook {
+    my ( $self, $name, $val ) = @_;
+    ref $val eq 'CODE'
+	or croak "Attribute $name must be a code reference";
+    return( $self->{$name} = $val );
+}
+
 sub _set_integer {
     my ($self, $name, $val) = @_;
     (!defined $val || $val !~ m/^[-+]?\d+$/)
@@ -594,6 +648,13 @@ sub _set_literal {
 	delete $self->{_source_cache};
 	return ($self->{$name} = $val);
     }
+}
+
+sub _set_unsigned_integer {
+    my ($self, $name, $val) = @_;
+    ( !defined $val || $val !~ m/ \A \d+ \z /smx )
+	and croak "Attribute $name must be an unsigned integer";
+    return ($self->{$name} = $val + 0);
 }
 
 sub _set_use_all_limit {
@@ -697,7 +758,8 @@ sub _digest {
 sub _error {
     my ($self, @args) = @_;
     $self->{error} = join '', @args;
-    $self->{croak} and croak $self->{error};
+##  $self->{croak} and croak $self->{error};
+    $self->{croak} and return;
     $self->{carp} and carp $self->{error};
     return;
 }
@@ -862,8 +924,6 @@ _set_clean_soapdish( qw{ default_ns proxy timeout } );
 
 sub _soapdish {
     my $self = shift;
-    $self->{error} = undef;
-    eval {1};	# Clear $@.
     $self->{trace} and SOAP::Trace->import ('all');
     $self->{_soapdish} and return $self->{_soapdish};
     my $conn = '';	# Other possibility is '#'.
@@ -930,6 +990,10 @@ This boolean attribute determines whether the data acquisition methods carp on
 encountering an error. If false, they silently return undef. Note,
 though, that the L<croak|/croak> attribute trumps this one.
 
+If L<retry|/retry> is set to a number greater than 0, you will get a
+carp on each failed query, provided L<croak|/croak> is false. If
+L<croak|/croak> is true, no retries will be carped.
+
 This attribute was introduced in Geo::WebService::Elevation::USGS
 version 0.005_01.
 
@@ -939,6 +1003,9 @@ The default is 0 (i.e. false).
 
 This attribute determines whether the data acquisition methods croak on
 encountering an error. If false, they return undef on an error.
+
+If L<retry|/retry> is set to a number greater than 0, the data
+acquisition method will not croak until all retries are exhausted.
 
 The default is 1 (i.e. true).
 
@@ -987,6 +1054,43 @@ track the change.
 
 The default is
 'http://gisdata.usgs.gov/xmlwebservices2/elevation_service.asmx'.
+
+=head3 retry (unsigned integer)
+
+This attribute specifies the number of retries to be done by
+C<getAllElevations()> and C<getElevation()> when an error is
+encountered. The first try is not considered a retry, so if you set this
+to 1 you get a maximum of two queries (the try and the retry).
+
+Retries are done only on actual errors, not on bad extents. They are
+also subject to the C<$THROTTLE> setting if any.
+
+The default is 0, i.e. no retries.
+
+=head3 retry_hook (code reference)
+
+This attribute specifies a piece of code to be called before retrying.
+The code will be called before a retry takes place, and will be passed
+the Geo::WebService::Elevation::USGS object, the number of the retry
+(from 1), the name of the method being retried (C<'getAllElevations'> or
+C<'getElevation'>), and the arguments to that method. If the position
+was passed as an object, the hook gets the latitude and longitude
+unpacked from the object. The hook will B<not> be called before the
+first try, nor after the last retry.
+
+Examples:
+
+ # To sleep 5 seconds between retries:
+ $eq->set( retry_hook => sub { sleep 5 } );
+ 
+ # To sleep 1 second before the first retry, 2 seconds
+ # before the second, and so on:
+ $eq->set( retry_hook => sub { sleep $_[1] } );
+ 
+ # To do nothing between retries:
+ $eq->set( retry_hook => sub {} );
+
+The default is the null subroutine, i.e. C<sub {}>.
 
 =head3 source
 
