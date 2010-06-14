@@ -622,14 +622,14 @@ sub _set_hook {
 
 sub _set_integer {
     my ($self, $name, $val) = @_;
-    (!defined $val || $val !~ m/^[-+]?\d+$/)
+    (!defined $val || $val !~ m/ \A [-+]? \d+ \z /smx)
 	and croak "Attribute $name must be an integer";
     return ($self->{$name} = $val + 0);
 }
 
 sub _set_integer_or_undef {
     my ($self, $name, $val) = @_;
-    (defined $val && $val !~ m/^\d+$/)
+    (defined $val && $val !~ m/ \A \d+ \z /smx)
 	and croak "Attribute $name must be an unsigned integer or undef";
     return ($self->{$name} = $val);
 }
@@ -723,11 +723,11 @@ sub _digest {
 	    if (defined $source &&
 ####		$self->_supress_no_value_err() &&
 		$rslt =~ m/ERROR:\sNo\sElevation\svalue\swas\sreturned\s
-			from\sservers\./ix &&
+			from\sservers\./ismx &&
 		(my $hash = $self->_get_bad_extent_hash($source))) {
 		return $hash;
 	    }
-	    $rslt =~ m/[.?!]$/ or $rslt .= '.';
+	    $rslt =~ m/ [.?!] \z /smx or $rslt .= '.';
 	    $error = defined $source ?
 		"$rslt Source = '$source'" : $rslt;
 	}
