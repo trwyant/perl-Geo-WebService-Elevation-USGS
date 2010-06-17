@@ -28,7 +28,7 @@ my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(places => 2)},
 	"Unable to access $pxy");
 }
 
-plan (tests => 163);
+plan (tests => 165);
 
 my $ele_ft = '54.70';	# Expected elevation in feet.
 my $ele_mt = '16.67';	# Expected elevation in meters.
@@ -481,6 +481,23 @@ SKIP: {
 	    'Elevation is in feet on retry');
 	is($hash{'NED.CONUS_NED_13E'}{Elevation}, $ele_ft,
 	    "Elevation is $ele_ft on retry");
+    }
+
+    SKIP: {
+	eval {
+	    require Time::HiRes;
+	    1;
+	} or skip( "Unable to load Time::HiRes", 2 );
+	$retries = 0;
+	no warnings qw{ once };
+	local $Geo::WebService::Elevation::USGS::THROTTLE = 5;
+	$bogus->{_hack_result} = _get_bad_som();
+	my $start = Time::HiRes::time();
+	$rslt = eval {$bogus->getElevation(38.898748, -77.037684)};
+	my $finish = Time::HiRes::time();
+	ok( $retries, 'A retry was performed after throttling' );
+	cmp_ok( $finish - $start, '>', 4,
+	    'Throttling in fact probably took place' );
     }
 
 }

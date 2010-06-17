@@ -82,6 +82,8 @@ The following public methods are provided:
 
 package Geo::WebService::Elevation::USGS;
 
+use 5.008;
+
 use strict;
 use warnings;
 
@@ -376,11 +378,11 @@ sub getAllElevations {
 	$self->{error} = undef;
 	eval {1};	# Clear $@.
 
+	$sleep->();
+
 	my $raw = exists $self->{_hack_result} ?
 	    delete $self->{_hack_result} :
 	    eval {
-
-		$sleep->();
 
 		local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
 
@@ -512,11 +514,11 @@ sub getElevation {
 	$self->{error} = undef;
 	eval {1};	# Clear $@.
 
+	$sleep->();
+
 	my $rslt = exists $self->{_hack_result} ?
 	    delete $self->{_hack_result} :
 	    eval {
-
-		$sleep->();
 
 		local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
 
