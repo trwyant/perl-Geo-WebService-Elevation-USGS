@@ -97,6 +97,7 @@ our $VERSION = '0.005_01';
 use constant BEST_DATA_SET => -1;
 
 my $sleep;
+my $using_time_hires;
 {
     our $THROTTLE;
     my $mark;
@@ -104,22 +105,32 @@ my $sleep;
 	    require Time::HiRes;
 	    Time::HiRes->can( 'time' ) && Time::HiRes->can( 'sleep' );
 	} ) {
+	$using_time_hires = 1;
 	$mark = Time::HiRes::time();
 	$sleep = sub {
-	    $THROTTLE and $THROTTLE > 0 or return;
+	    if ( defined $THROTTLE ) {
+		carp '$THROTTLE deprecated - use ', __PACKAGE__,
+		'->set( throttle => value ) instead';
+		__PACKAGE__->set( throttle => $THROTTLE );
+		$THROTTLE = undef;
+	    }
 	    my $now = Time::HiRes::time();
 	    $mark and $now < $mark and Time::HiRes::sleep( $mark - $now );
-	    $mark = $now + $THROTTLE;
+	    $mark = $now + __PACKAGE__->get( 'throttle' );
 	    return;
 	};
     } else {
 	$mark = time();
 	$sleep = sub {
-	    $THROTTLE and $THROTTLE > 0 or return;
-	    my $throttle = $THROTTLE < 1 ? 1 : $THROTTLE;
+	    if ( defined $THROTTLE ) {
+		carp '$THROTTLE deprecated - use ', __PACKAGE__,
+		'->set( throttle => value ) instead';
+		__PACKAGE__->set( throttle => $THROTTLE );
+		$THROTTLE = undef;
+	    }
 	    my $now = time();
 	    $mark and $now < $mark and sleep( $mark - $now );
-	    $mark = $now + $throttle;
+	    $mark = $now + __PACKAGE__->get( 'throttle' );
 	    return;
 	};
     }
@@ -169,11 +180,21 @@ my %mutator = (
     retry	=> \&_set_unsigned_integer,
     retry_hook	=> \&_set_hook,
     source	=> \&_set_source,
+    throttle	=> \&_set_throttle,
     timeout	=> \&_set_integer_or_undef,
     trace	=> \&_set_literal,
     units	=> \&_set_literal,
     use_all_limit => \&_set_use_all_limit,
 );
+
+my %access_type = (
+    throttle	=> \&_only_static_attr,
+);
+
+foreach my $name ( keys %mutator ) {
+    exists $access_type{$name}
+	or $access_type{$name} = \&_no_static_attr;
+}
 
 =head3 %values = $eq->attributes();
 
@@ -334,10 +355,11 @@ the attribute does not exist.
 =cut
 
 sub get {
-    my ($self, $attr) = @_;
-    exists $mutator{$attr}
-	or croak "No such attribute as '$attr'";
-    return $self->{$attr};
+    my ($self, $name) = @_;
+    $access_type{$name}
+	or croak "No such attribute as '$name'";
+    my $holder = $access_type{$name}->( $self, $name );
+    return $holder->{$name};
 }
 
 =head3 $rslt = $eq->getAllElevations($lat, $lon, $valid);
@@ -606,9 +628,12 @@ result in an exception being thrown.
 	my $clean;
 	while (@args) {
 	    my ( $name, $val ) = splice @args, 0, 2;
-	    exists $mutator{$name}
+	    $access_type{$name}
 		or croak "No such attribute as '$name'";
-	    $mutator{$name}->( $self, $name, $val );
+	    exists $mutator{$name}
+		or croak "Attribute '$name' is read-only";
+	    my $holder = $access_type{$name}->( $self, $name );
+	    $mutator{$name}->( $holder, $name, $val );
 	    $clean ||= $clean_soapdish{$name};
 	}
 	$clean and delete $self->{_soapdish};
@@ -657,6 +682,23 @@ sub _set_literal {
 	delete $self->{_source_cache};
 	return ($self->{$name} = $val);
     }
+}
+
+sub _set_throttle {
+    my ( $self, $name, $val ) = @_;
+    if ( defined $val ) {
+	looks_like_number( $val )
+	    and $val >= 0
+	    or croak "The $name attribute must be undef or a ",
+		'non-negative number';
+	$using_time_hires
+	    or $val >= 1
+	    or $val == 0
+	    or $val = 1;
+    } else {
+	$val = 0;
+    }
+    return( $self->{$name} = $val );
 }
 
 sub _set_unsigned_integer {
@@ -912,6 +954,39 @@ sub _get_source_cache {
     }
 }
 
+{
+    my %static = (	# Static attribute values.
+	throttle => 0,
+    );
+
+#	$self->_no_static_attr( $name );
+#
+#	Croaks if the invocant is not a reference. The message assumes
+#	the method was called trying to access an attribute, whose name
+#	is $name.
+
+    sub _no_static_attr {
+	my ( $self, $name ) = @_;
+	ref $self
+	    or croak "Attribute $name may not be accessed statically";
+	return $self;
+    }
+
+#	$self->_only_static_attr( $name );
+#
+#	Croaks if the invocant is a reference. The message assumes the
+#	method was called trying to access an attribute, whose name is
+#	$name.
+
+    sub _only_static_attr {
+	my ( $self, $name ) = @_;
+	ref $self
+	    and croak "Attribute $name may only be accessed statically";
+	return \%static;
+    }
+
+}
+
 #	$id = _normalize_id($id)
 #
 #	This subroutine normalizes a Source_ID by uppercasing it. It
@@ -1072,7 +1147,7 @@ encountered. The first try is not considered a retry, so if you set this
 to 1 you get a maximum of two queries (the try and the retry).
 
 Retries are done only on actual errors, not on bad extents. They are
-also subject to the C<$THROTTLE> setting if any.
+also subject to the L</throttle> setting if any.
 
 The default is 0, i.e. no retries.
 
@@ -1113,6 +1188,20 @@ used.
 
 The default is '-1', which requests a response from the 'best' data
 source for the given point.
+
+=head3 throttle (non-negative number, or undef)
+
+ Geo::WebService::Elevation::USGS->set( throttle => 5 );
+
+This attribute, if defined and positive, specifies the minimum interval
+between queries, in seconds. This attribute may be set statically only,
+and the limit applies to all queries, not just the ones from a given
+object. If L<Time::HiRes|Time::HiRes> can be loaded, then sub-second
+intervals are supported, otherwise not.
+
+This functionality, and its implementation, are experimental, and may be
+changed or retracted without notice. Heck, I may even go back to
+C<$TARGET>, though I don't think so.
 
 =head3 timeout (integer, or undef)
 
@@ -1159,6 +1248,15 @@ The default is 5, which was chosen based on timings of the two methods.
 
 =head3 $Geo::WebService::Elevation:USGS::THROTTLE
 
+B<This interface is deprecated;> use the L</throttle> static method
+instead. It will be revoked in release C<0.006>, and at that time
+setting C<$THROTTLE> will become a fatal error. The short deprecation
+cycle is because this interface has never been released in a production
+release, and because you were warned when it was introduced. Until the
+next production release, the next query after setting C<$THROTTLE> will
+cause a warning message to be issued, and its value to be passed to
+L</throttle>.
+
 If set to a positive number, this symbol limits the rate at which
 queries can be issued. The value represents the minimum interval between
 queries (in seconds), which is enforced by having the query methods
@@ -1178,10 +1276,6 @@ commitments. Same for quasi-numbers such as C<Inf> and C<NaN>.
 
 The default is C<undef>, which means that this functionality is
 disabled.
-
-This functionality should be considered experimental, and it may be
-revoked, possibly without notice, if either the functionality or this
-particular implementation of it are seen to be a bad idea.
 
 =head1 ACKNOWLEDGMENTS
 

@@ -489,8 +489,7 @@ SKIP: {
 	    1;
 	} or skip( "Unable to load Time::HiRes", 2 );
 	$retries = 0;
-	no warnings qw{ once };
-	local $Geo::WebService::Elevation::USGS::THROTTLE = 5;
+	Geo::WebService::Elevation::USGS->set( throttle => 5 );
 	$bogus->{_hack_result} = _get_bad_som();
 	my $start = Time::HiRes::time();
 	$rslt = eval {$bogus->getElevation(38.898748, -77.037684)};
@@ -498,6 +497,7 @@ SKIP: {
 	ok( $retries, 'A retry was performed after throttling' );
 	cmp_ok( $finish - $start, '>', 4,
 	    'Throttling in fact probably took place' );
+	Geo::WebService::Elevation::USGS->set( throttle => undef );
     }
 
 }
