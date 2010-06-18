@@ -1,3 +1,11 @@
+0.005_02	18-Jun-2010	T. R. Wyant
+  Recode throttle code to simplify, and fix bug that was causing
+    throttling not to take place on every other query.
+  Deprecate the $THROTTLE interface to the throttle mechanism, replacing
+    it with static attribute 'throttle'.
+  Test the throttle mechanism, and make it actually work under test
+    conditions.
+
 0.005_01	14-Jun-2010	T. R. Wyant
   Add authortest tests to run the normal tests without the optional
     modules.
