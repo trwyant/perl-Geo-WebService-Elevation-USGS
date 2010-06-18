@@ -96,7 +96,6 @@ our $VERSION = '0.005_01';
 
 use constant BEST_DATA_SET => -1;
 
-my $sleep;
 my $using_time_hires;
 {
     our $THROTTLE;
@@ -105,34 +104,30 @@ my $using_time_hires;
 	    require Time::HiRes;
 	    Time::HiRes->can( 'time' ) && Time::HiRes->can( 'sleep' );
 	} ) {
+	*_time = \&Time::HiRes::time;
+	*_sleep = \&Time::HiRes::sleep;
 	$using_time_hires = 1;
-	$mark = Time::HiRes::time();
-	$sleep = sub {
-	    if ( defined $THROTTLE ) {
-		carp '$THROTTLE deprecated - use ', __PACKAGE__,
-		'->set( throttle => value ) instead';
-		__PACKAGE__->set( throttle => $THROTTLE );
-		$THROTTLE = undef;
-	    }
-	    my $now = Time::HiRes::time();
-	    $mark and $now < $mark and Time::HiRes::sleep( $mark - $now );
-	    $mark = $now + __PACKAGE__->get( 'throttle' );
-	    return;
-	};
     } else {
-	$mark = time();
-	$sleep = sub {
-	    if ( defined $THROTTLE ) {
-		carp '$THROTTLE deprecated - use ', __PACKAGE__,
-		'->set( throttle => value ) instead';
-		__PACKAGE__->set( throttle => $THROTTLE );
-		$THROTTLE = undef;
-	    }
-	    my $now = time();
-	    $mark and $now < $mark and sleep( $mark - $now );
-	    $mark = $now + __PACKAGE__->get( 'throttle' );
-	    return;
-	};
+	*_time = sub { return time };
+	*_sleep = sub { return sleep $_[0] };
+    }
+
+    $mark = _time();
+    sub _pause {
+	my ( $self ) = @_;
+	if ( defined $THROTTLE ) {
+	    carp '$THROTTLE deprecated - use ', __PACKAGE__,
+	    '->set( throttle => value ) instead';
+	    __PACKAGE__->set( throttle => $THROTTLE );
+	    $THROTTLE = undef;
+	}
+	my $now = _time();
+	while ( $now < $mark ) {
+	    _sleep( $mark - $now );
+	    $now = _time();
+	}
+	$mark = $now + __PACKAGE__->get( 'throttle' );
+	return;
     }
 }
 
@@ -400,7 +395,7 @@ sub getAllElevations {
 	$self->{error} = undef;
 	eval {1};	# Clear $@.
 
-	$sleep->();
+	$self->_pause();
 
 	my $raw = exists $self->{_hack_result} ?
 	    delete $self->{_hack_result} :
@@ -536,7 +531,7 @@ sub getElevation {
 	$self->{error} = undef;
 	eval {1};	# Clear $@.
 
-	$sleep->();
+	$self->_pause();
 
 	my $rslt = exists $self->{_hack_result} ?
 	    delete $self->{_hack_result} :
