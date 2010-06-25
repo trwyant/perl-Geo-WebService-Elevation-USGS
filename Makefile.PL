@@ -33,5 +33,6 @@ $mmv >= 6.4501 and $args{META_MERGE} = {
     },
 };
 
-WriteMakefile (%args);
+$mmv >= 6.4701 and $args{MIN_PERL_VERSION} = 5.006;
 
+WriteMakefile (%args);
