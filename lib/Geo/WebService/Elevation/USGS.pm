@@ -309,7 +309,6 @@ Note that this may result in an empty array.
 	my $ref = ref (my $source = $self->_get_source());
 	my $rslt;
 	if ($ref eq 'ARRAY') {
-####	    $self->_supress_no_value_err(\$ref);
 	    $rslt = [];
 	    foreach (@$source) {
 		push @$rslt, $self->getElevation($lat, $lon, $_);
@@ -767,7 +766,6 @@ sub _digest {
 	}
 	unless (ref $rslt) {
 	    if (defined $source &&
-####		$self->_supress_no_value_err() &&
 		$rslt =~ m/ERROR:\sNo\sElevation\svalue\swas\sreturned\s
 			from\sservers\./ismx &&
 		(my $hash = $self->_get_bad_extent_hash($source))) {
@@ -1019,42 +1017,6 @@ sub _soapdish {
 	    ->proxy ($self->{proxy}, timeout => $self->{timeout});
     return ( $self->{_soapdish} = $soap );
 }
-
-#	$boolean = $ele->_supress_no_value_err()
-#	or
-#	$boolean = $ele->_supress_no_value_err($value);
-#
-#	This method returns (and optionally sets) an internal attribute
-#	that causes the _digest method to return a packet with an
-#	elevation of 'BAD_EXTENT' rather than an error when it
-#	determines that getElevation has in fact encountered a bad
-#	extent.
-#
-#	If the $value is a reference, it is weakened after it is stored,
-#	which causes the internal attribute to magically become unset
-#	when the referenced variable goes out of scope.
-
-=begin comment
-
-die <<eod;
-This code requires 'weaken', which in turn requires version 1.14 of
-Scalar::Util. Without this code, Scalar::Util is unconstrained.
-Obviously, this 'die' must be removed.
-eod
-
-sub _supress_no_value_err {
-    my ($self, @args) = @_;
-    if (@args) {
-	my $value = $args[0];
-	$self->{_supress_no_value_err} = $value;
-	ref $value and weaken $self->{_supress_no_value_err};
-    }
-    return $self->{_supress_no_value_err};
-}
-
-=end comment
-
-=cut
 
 
 1;
