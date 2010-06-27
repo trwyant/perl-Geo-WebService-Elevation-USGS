@@ -3,6 +3,7 @@ Changes
 eg/README
 eg/usgs_ele
 inc/Geo/WebService/Elevation/USGS/Build.pm
+inc/Geo/WebService/Elevation/USGS/Meta.pm
 lib/Geo/WebService/Elevation/USGS.pm
 LICENSES/Artistic
 LICENSES/Copying

@@ -6,9 +6,12 @@ use warnings;
 use lib qw{ inc };
 
 use Geo::WebService::Elevation::USGS::Build;
+use Geo::WebService::Elevation::USGS::Meta;
 use Module::Build;
 
 (my $mbv = Module::Build->VERSION) =~ s/_//g;
+
+my $meta = Geo::WebService::Elevation::USGS::Meta->new();
 
 my %args = (
     dist_author => 'Tom Wyant (wyant at cpan dot org)',
@@ -17,12 +20,11 @@ my %args = (
     build_requires => {
 	'Test::More' => 0.40,
     },
-    requires => {
-	'Params::Util' => 0.11,
-	'Scalar::Util' => 1.10,
-	'SOAP::Lite' => 0,
-    },
+    requires => $meta->requires(
+	perl	=> $meta->requires_perl(),
+    ),
     add_to_cleanup => [ qw{ xt/optionals } ],
+    dynamic_config => 1,
     license => 'perl',
 );
 
@@ -35,8 +37,10 @@ $mbv >= 0.28 and $args{meta_merge} = {
     },
 };
 
+# Don't require Module::Build if we're making a distribution, since the
+# user can use ExtUtils::MakeMaker.
 $mbv >= 0.34
-    and $args{auto_configure_requires} = 0;	# Don't require Module::Build
+    and $args{auto_configure_requires} = !$meta->distribution();
 
 my $bldr = Geo::WebService::Elevation::USGS::Build->new (%args);
 
