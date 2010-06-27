@@ -28,7 +28,7 @@ my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(places => 2)},
 	"Unable to access $pxy");
 }
 
-plan (tests => 165);
+plan (tests => 168);
 
 my $ele_ft = '54.70';	# Expected elevation in feet.
 my $ele_mt = '16.67';	# Expected elevation in meters.
@@ -213,6 +213,11 @@ SKIP: {
     ok(!$@, 'getElevation (only) succeeded') or diag($@);
     is($rslt, '58.6035683399111',
 	'getElevation (only) returned 58.6035683399111');
+
+    $rslt = eval {$bogus->getElevation(40, 90, 'NED.CONUS_NED_13E')};
+    ok(!$@, 'getElevation without returned value succeeded') or diag($@);
+    ok( ref $rslt eq 'HASH', 'getElevation result is a hash ref' );
+    is( $rslt->{Elevation}, 'BAD_EXTENT', 'getElevation returned bad extent' );
 
     $bogus->{_hack_result} = _get_bad_som();
     $rslt = eval {$bogus->getElevation(38.898748, -77.037684, undef, 1)};

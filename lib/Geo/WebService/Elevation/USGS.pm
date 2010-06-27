@@ -766,8 +766,8 @@ sub _digest {
 	}
 	unless (ref $rslt) {
 	    if (defined $source &&
-		$rslt =~ m/ERROR:\sNo\sElevation\svalue\swas\sreturned\s
-			from\sservers\./ismx &&
+		$rslt =~ m/ \b ERROR: [ ] No [ ] Elevation [ ] value [ ]
+		    was [ ] returned [ ] from [ ] server /ismx &&
 		(my $hash = $self->_get_bad_extent_hash($source))) {
 		return $hash;
 	    }
