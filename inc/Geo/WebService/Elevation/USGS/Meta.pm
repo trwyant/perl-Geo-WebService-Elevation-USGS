@@ -54,12 +54,14 @@ Geo::WebService::Elevation::USGS::Meta - Information needed to build Geo::WebSer
  my $meta = Geo::WebService::Elevation::USGS::Meta->new();
  use YAML;
  print "Required modules:\n", Dump(
-     Geo::WebService::Elevation::USGS::Meta->requires() );
+     $meta->requires() );
 
 =head1 DETAILS
 
 This module centralizes information needed to build
-C<Geo::WebService::Elevation::USGS>.
+C<Geo::WebService::Elevation::USGS>. It is private to the
+C<Geo::WebService::Elevation::USGS> package, and may be changed or
+retracted without notice.
 
 =head1 METHODS
 
@@ -67,18 +69,27 @@ This class supports the following public methods:
 
 =head2 new
 
+ my $meta = Geo::WebService::Elevation::USGS::Meta->new();
+
 This method instantiates the class.
 
 =head2 distribution
+
+ if ( $meta->distribution() ) {
+     print "Making distribution\n";
+ } else {
+     print "Not making distribution\n";
+ }
 
 This method returns the value of the environment variable
 C<MAKING_MODULE_DISTRIBUTION> at the time the object was instantiated.
 
 =head2 requires
 
- Geo::WebService::Elevation::USGS::Meta->requires();
+ use YAML;
+ print Dump( $meta->requires() );
 
-This static method computes and returns a reference to a hash describing
+This method computes and returns a reference to a hash describing
 the modules required to run the C<Geo::WebService::Elevation::USGS>
 package, suitable for use in a F<Build.PL> C<requires> key, or a
 F<Makefile.PL> C<PREREQ_PM> key. Any additional arguments will be
@@ -88,9 +99,9 @@ may be added.
 
 =head2 requires_perl
 
- Geo::WebService::Elevation::USGS::Meta->requires_perl();
+ print 'This package requires Perl ', $meta->requires_perl(), "\n";
 
-This static method returns the version of Perl required by the package.
+This method returns the version of Perl required by the package.
 
 =head1 ATTRIBUTES
 
