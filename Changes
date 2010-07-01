@@ -1,3 +1,9 @@
+0.006		30-Jun-2010	T. R. Wyant
+  Croak if $THROTTLE is set. The short deprecation cycle is because
+    $THROTTLE was introduced in a development version.
+  Update tests that made use of non-US data sets, since the USGS has
+    apparently taken them all down.
+
 0.005_03	27-Jun-2010	T. R. Wyant
   Remove commented-out code, rewrite regexp for clarity.
   Consolidate dependencies into inc/.../Meta.pm
