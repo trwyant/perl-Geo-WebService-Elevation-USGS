@@ -115,12 +115,9 @@ my $using_time_hires;
     $mark = _time();
     sub _pause {
 	my ( $self ) = @_;
-	if ( defined $THROTTLE ) {
-	    carp '$THROTTLE deprecated - use ', __PACKAGE__,
-	    '->set( throttle => value ) instead';
-	    __PACKAGE__->set( throttle => $THROTTLE );
-	    $THROTTLE = undef;
-	}
+	defined $THROTTLE
+	    and croak '$THROTTLE revoked - use ', __PACKAGE__,
+		'->set( throttle => value ) instead';
 	my $now = _time();
 	while ( $now < $mark ) {
 	    _sleep( $mark - $now );

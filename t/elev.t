@@ -5,6 +5,8 @@ use warnings;
 
 use Test::More;
 
+use constant BAD_EXTENT_SOURCE => 'NED.AK_NED';
+
 _skip_it(eval {require Geo::WebService::Elevation::USGS},
     'Unable to load Geo::WebService::Elevation::USGS');
 
@@ -28,7 +30,7 @@ my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(places => 2)},
 	"Unable to access $pxy");
 }
 
-plan (tests => 168);
+plan (tests => 170);
 
 my $ele_ft = '54.70';	# Expected elevation in feet.
 my $ele_mt = '16.67';	# Expected elevation in meters.
@@ -70,7 +72,8 @@ SKIP: {
 
 SKIP: {
     $rslt = eval {
-	$ele->getElevation(38.898748, -77.037684, 'SRTM.C_SA_3', 1)};
+##	$ele->getElevation(38.898748, -77.037684, 'SRTM.C_SA_3', 1)};
+	$ele->getElevation(38.898748, -77.037684, BAD_EXTENT_SOURCE, 1)};
 
     _skip_on_server_error($ele, 2);
     ok(!$@, 'getElevation does not fail when data has bad extent')
@@ -153,7 +156,8 @@ SKIP: {
 SKIP: {
     $ele->set(
 ##	source => ['NED.CONUS_NED_13E', 'NED.CONUS_NED', 'SRTM.C_SA_3'],
-	source => ['NED.CONUS_NED_13E', 'NED.CONUS_NED', 'NED.AK_NED'],
+##	source => ['NED.CONUS_NED_13E', 'NED.CONUS_NED', 'NED.AK_NED'],
+	source => ['NED.CONUS_NED_13E', 'NED.CONUS_NED', BAD_EXTENT_SOURCE],
 	use_all_limit => 0,
     );
     $rslt = eval {$ele->elevation(38.898748, -77.037684)};
@@ -295,7 +299,7 @@ SKIP: {
 
     SKIP: {
 	$bogus->set(
-	    source => {'SRTM.C_SA_3' => 1},
+	    source => {&BAD_EXTENT_SOURCE => 1},
 	    use_all_limit => 5,
 	);
 	$rslt = eval {$bogus->elevation(38.898748, -77.037684)};
@@ -304,10 +308,10 @@ SKIP: {
 	$err =~ m/Input Source Layer was invalid/i
 	    and skip($err, 2);
 	ok(!$err,
-	    'Query of SRTM.C_SA_3 still is not an error')
+	    "Query of @{[ BAD_EXTENT_SOURCE ]} still is not an error" )
 	    or diag($bogus->get('error'));
 	ok(!$bogus->is_valid($rslt->[0]),
-	    'SRTM.C_SA_3 still does not return a valid elevation');
+	    "@{[ BAD_EXTENT_SOURCE ]} still does not return a valid elevation");
     }
 
     $bogus->{_hack_result} = _get_bad_som();
@@ -491,7 +495,7 @@ SKIP: {
     SKIP: {
 	eval {
 	    require Time::HiRes;
-	    1;
+	    Time::HiRes->can( 'time' ) && Time::HiRes->can( 'sleep' );
 	} or skip( "Unable to load Time::HiRes", 2 );
 	$retries = 0;
 	Geo::WebService::Elevation::USGS->set( throttle => 5 );
@@ -503,6 +507,15 @@ SKIP: {
 	cmp_ok( $finish - $start, '>', 4,
 	    'Throttling in fact probably took place' );
 	Geo::WebService::Elevation::USGS->set( throttle => undef );
+    }
+
+    {
+	no warnings qw{ once };
+	local $Geo::WebService::Elevation::USGS::THROTTLE = 5;
+	$rslt = eval {$bogus->getElevation(38.898748, -77.037684)};
+	ok( !$rslt, 'No result when throttling with $THROTTLE' );
+	like( $@, qr{ \A \$THROTTLE [ ] revoked }smx,
+	    'Error says $THROTTLE revoked' );
     }
 
 }
