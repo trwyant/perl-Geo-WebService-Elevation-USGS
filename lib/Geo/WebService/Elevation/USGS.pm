@@ -88,8 +88,7 @@ use strict;
 use warnings;
 
 use Carp;
-use Params::Util 0.11 qw{_INSTANCE};
-use Scalar::Util 1.10 qw{looks_like_number};
+use Scalar::Util 1.10 qw{ blessed looks_like_number };
 use SOAP::Lite;
 
 our $VERSION = '0.006';
@@ -555,7 +554,7 @@ sub getElevation {
 	    next;
 	};
 
-	if (_INSTANCE($rslt, 'SOAP::SOM') && $rslt->fault &&
+	if ( _instance( $rslt, 'SOAP::SOM' ) && $rslt->fault &&
 		$rslt->faultstring =~
 	    m/Conversion from string "BAD_EXTENT" to type 'Double'/) {
 	    if (my $hash = $self->_get_bad_extent_hash($source)) {
@@ -727,7 +726,7 @@ sub _set_use_all_limit {
 sub _digest {
     my ($self, $rslt, $source) = @_;
     $@ and return $self->_error($@);
-    if (_INSTANCE($rslt, 'SOAP::SOM')) {
+    if ( _instance( $rslt, 'SOAP::SOM' ) ) {
 	if ($rslt->fault) {
 	    return $self->_error($rslt->faultstring);
 	} else {
@@ -917,6 +916,19 @@ sub _get_source_cache {
     }
 }
 
+#	_instance( $object, $class )
+#	    and print "\$object isa $class\n";
+#
+#	Return true if $object is an instance of class $class, and false
+#	otherwise. Unlike UNIVERSAL::isa, this is false if the first
+#	object is not a reference.
+
+sub _instance {
+    my ( $object, $class ) = @_;
+    blessed( $object ) or return;
+    return $object->isa( $class );
+}
+
 #	my ($self, $lat, $lon, @_) = _latlon(@_);
 #
 #	Strip the object reference, latitude, and longitude off the
@@ -936,7 +948,7 @@ sub _get_source_cache {
     sub _latlon {
 	my ($self, $obj, @args) = @_;
 	foreach my $class (keys %known) {
-	    if (_INSTANCE($obj, $class)) {
+	    if (_instance( $obj, $class ) ) {
 		return ($self, $known{$class}->($obj), @args);
 	    }
 	}
