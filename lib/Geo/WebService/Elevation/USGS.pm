@@ -613,7 +613,7 @@ result in an exception being thrown.
 
     my %clean_soapdish;	# Attributes that are used in _soapdish();
 
-    sub set {
+    sub set {	## no critic (ProhibitAmbiguousNames)
 	my ($self, @args) = @_;
 	my $clean;
 	while (@args) {
