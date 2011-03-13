@@ -423,7 +423,7 @@ sub getAllElevations {
 	my @rslt;
 	my $ref = ref $cooked->{Data_ID};
 	if ($ref eq 'ARRAY') {
-	    my $limit = @{$cooked->{Data_ID}} - 1;
+###	    my $limit = @{$cooked->{Data_ID}} - 1;
 	    foreach my $inx (0 .. (scalar @{$cooked->{Data_ID}} - 1)) {
 		push @rslt, {
 		    Data_Source => $cooked->{Data_Source}[$inx],

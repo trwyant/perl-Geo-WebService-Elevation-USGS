@@ -678,7 +678,7 @@ sub _skip_it {
 	    m/System\.Web\.Services\.Protocols\.SoapException/i
 	) or return;
 	$skips += $how_many;
-	my ($pkg, $file, $line) = caller(0);
+	my (undef, $file, $line) = caller(0);
 	diag("Skipping $how_many tests: $_ at $file line $line");
 	return skip ($_, $how_many);
     }
