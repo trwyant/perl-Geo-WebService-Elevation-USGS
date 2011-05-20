@@ -91,7 +91,7 @@ use Carp;
 use Scalar::Util 1.10 qw{ blessed looks_like_number };
 use SOAP::Lite;
 
-our $VERSION = '0.006';
+our $VERSION = '0.007';
 
 use constant BEST_DATA_SET => -1;
 
