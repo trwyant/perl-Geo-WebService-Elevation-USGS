@@ -634,7 +634,7 @@ SKIP: {
     $ele->set(use_all_limit => 0);	# Force getAllElevations
     $rslt = eval {$ele->elevation($gp)};
     _skip_on_server_error($ele, 7);
-    ok(!$@, "elevation($kind GPS::Point) via getAllElevations succeeded")
+    ok(!$@, "elevation($kind) via getAllElevations succeeded")
 	or diag($@);
     is(ref $rslt, 'ARRAY',
 	"elevation($kind) returns an array from getAllElevations");
