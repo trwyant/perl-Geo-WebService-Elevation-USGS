@@ -27,8 +27,11 @@ sub requires {
 ##  if ( ! $self->distribution() ) {
 ##  }
     return {
-	'Scalar::Util'	=> 1.10,
-	'SOAP::Lite'	=> 0,
+	'Carp'			=> 0,
+	'HTTP::Request::Common'	=> 0,
+	'LWP::UserAgent'	=> 0,
+	'Scalar::Util'		=> 1.10,
+	'XML::Parser'		=> 0,
 	@extra,
     };
 }

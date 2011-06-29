@@ -1,3 +1,10 @@
+0.007_01	29-Jun-2011	T. R. Wyant
+  Add the ability to use an HTTP Post request as a transport instead of
+    SOAP. The transport used is selected by the 'transport' attribute,
+    which defaults to 'HTTP_Post'. My current intent is to drop SOAP
+    support in the next production release, and retract the 'transport'
+    attribute.
+
 0.007		20-May-2011	T. R. Wyant
   Rewrite t/elev.t to take account of the fact that the best data set
     for the test point is now 'Elev_DC_Washington', not

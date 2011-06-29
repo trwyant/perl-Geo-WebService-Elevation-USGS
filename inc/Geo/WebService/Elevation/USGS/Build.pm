@@ -9,7 +9,7 @@ use Carp;
 use File::Spec;
 
 my @optionals_dir = qw{ xt author optionals };
-my @hide = qw{ Time::HiRes };
+my @hide = qw{ SOAP::Lite Time::HiRes };
 
 {
     my $done;

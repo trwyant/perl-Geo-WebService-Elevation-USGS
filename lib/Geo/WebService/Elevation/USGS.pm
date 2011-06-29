@@ -11,6 +11,18 @@ Geo::WebService::Elevation::USGS - Elevation queries against USGS web services.
    $eq->getElevation(38.898748, -77.037684)->{Elevation},
    " feet above sea level.\n";
 
+=head1 NOTICE
+
+This module is being converted to use a plain HTTP Post as the
+transport, rather than SOAP, due to the slowness of SOAP::Lite in fixing
+test errors.
+
+This development release has an attribute, 'transport', that selects the
+transport to be used: 'HTTP_Post' (the default), or 'SOAP'. It is my
+intent to make a production release the end of July 2011, which retracts
+the 'transport' attribute and the SOAP functionality. If someone really
+needs SOAP for some reason, please contact me, and I may reconsider.
+
 =head1 DESCRIPTION
 
 This module executes elevation queries against the United States
@@ -88,10 +100,12 @@ use strict;
 use warnings;
 
 use Carp;
+use HTTP::Request::Common;
+use LWP::UserAgent;
 use Scalar::Util 1.10 qw{ blessed looks_like_number };
-use SOAP::Lite;
+use XML::Parser;
 
-our $VERSION = '0.007';
+our $VERSION = '0.007_01';
 
 use constant BEST_DATA_SET => -1;
 
@@ -146,8 +160,9 @@ sub new {
 	default_ns	=> 'http://gisdata.usgs.gov/XMLWebServices2/',
 	error	=> undef,
 	places	=> undef,
+##	transport => 'HTTP_Post',	# Explicitly set below.
 	proxy	=>
-	    'http://gisdata.usgs.gov/xmlwebservices2/elevation_service.asmx',
+	    'http://gisdata.usgs.gov/XMLWebServices2/Elevation_Service.asmx',
 	retry	=> 0,
 	retry_hook => sub {},
 	source	=> BEST_DATA_SET,
@@ -158,6 +173,8 @@ sub new {
     };
     bless $self, $class;
     @args and $self->set(@args);
+    $self->{transport}
+	or $self->set( transport => 'HTTP_Post' );
     return $self;
 }
 
@@ -167,6 +184,7 @@ my %mutator = (
     default_ns	=> \&_set_literal,
     error	=> \&_set_literal,
     places	=> \&_set_integer_or_undef,
+    transport	=> \&_set_transport,
     proxy	=> \&_set_literal,
     retry	=> \&_set_unsigned_integer,
     retry_hook	=> \&_set_hook,
@@ -381,7 +399,6 @@ returned. Note that this may result in an empty array.
 
 sub getAllElevations {
     my ($self, $lat, $lon, $valid) = _latlon( @_ );
-    my $soap = $self->_soapdish();
     my $retry_limit = $self->get( 'retry' );
     my $retry = 0;
 
@@ -393,25 +410,11 @@ sub getAllElevations {
 
 	my $raw;
 	eval {
-	    if ( exists $self->{_hack_result} ) {
-		$raw = delete $self->{_hack_result}
-
-	    } else {
-
-		local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
-
-		$raw = $soap->call(
-		    SOAP::Data->name ('getAllElevations')->attr (
-			{xmlns => $self->{default_ns}}) =>
-		    SOAP::Data->new(name => 'X_Value', type => 'string',
-			value => $lon),
-		    SOAP::Data->new(name => 'Y_Value', type => 'string',
-			value => $lat),
-		    SOAP::Data->new(name => 'Elevation_Units', type => 'string',
-			value => $self->{units}),
-		);
-	    }
-
+	    $raw = $self->_request( getAllElevations =>
+		X_Value	=> $lon,
+		Y_Value	=> $lat,
+		Elevation_Units	=> $self->{units},
+	    );
 	    1;
 	} or do {
 	    $self->_error( $@ );
@@ -530,7 +533,6 @@ my $bad_extent_re = _make_matcher(
 sub getElevation {
     my ($self, $lat, $lon, $source, $only) = _latlon( @_ );
     defined $source or $source = BEST_DATA_SET;
-    my $soap = $self->_soapdish();
     my $retry_limit = $self->get( 'retry' );
     my $retry = 0;
 
@@ -542,39 +544,18 @@ sub getElevation {
 
 	my $rslt;
 	eval {
-
-	    if ( exists $self->{_hack_result} ) {
-		$rslt = delete $self->{_hack_result};
-	    } else {
-
-		local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
-
-		$rslt = $soap->call(SOAP::Data->name ('getElevation')->attr (
-			{xmlns => $self->{default_ns}}) =>
-		    SOAP::Data->new(name => 'X_Value', type => 'string',
-			value => $lon),
-		    SOAP::Data->new(name => 'Y_Value', type => 'string',
-			value => $lat),
-		    SOAP::Data->new(name => 'Source_Layer', type => 'string', 
-			value => $source),
-		    SOAP::Data->new(name => 'Elevation_Units', type => 'string',
-			value => $self->{units}),
-		    SOAP::Data->new(name => 'Elevation_Only', type => 'string',
-			value => $only ? 'true' : 'false'),
-		);
-	    }
+	    $rslt = $self->_request( getElevation =>
+		X_Value	=> $lon,
+		Y_Value	=> $lat,
+		Source_Layer	=> $source,
+		Elevation_Units	=> $self->{units},
+		Elevation_Only	=> $only ? 'true' : 'false',
+	    );
 	    1;
 	} or do {
 	    $self->_error( $@ );
 	    next;
 	};
-
-	if ( _instance( $rslt, 'SOAP::SOM' ) && $rslt->fault &&
-		$rslt->faultstring =~ m/ $bad_extent_re /smxo ) {
-	    if (my $hash = $self->_get_bad_extent_hash($source)) {
-		return $hash;
-	    }
-	}
 
 	my $info = $self->_digest( $rslt, $source ) or next;
 	return $info;
@@ -625,7 +606,11 @@ result in an exception being thrown.
 
 {
 
-    my %clean_soapdish;	# Attributes that are used in _soapdish();
+    # Changes in these values require re-instantiating the transport
+    # object. Or at least, they may do, under the following assumptions:
+    # SOAP: default_ns, proxy, timeout;
+    # HTTP_Post: timeout.
+    my %clean_transport_object = map { $_ => 1 } qw{ default_ns proxy timeout };
 
     sub set {	## no critic (ProhibitAmbiguousNames)
 	my ($self, @args) = @_;
@@ -638,15 +623,10 @@ result in an exception being thrown.
 		or croak "Attribute '$name' is read-only";
 	    my $holder = $access_type{$name}->( $self, $name );
 	    $mutator{$name}->( $holder, $name, $val );
-	    $clean ||= $clean_soapdish{$name};
+	    $clean ||= $clean_transport_object{$name};
 	}
-	$clean and delete $self->{_soapdish};
+	$clean and delete $self->{_transport_object};
 	return $self;
-    }
-
-    sub _set_clean_soapdish {
-	%clean_soapdish = map { $_ => 1 } @_;
-	return;
     }
 
 }
@@ -674,6 +654,30 @@ sub _set_integer_or_undef {
 
 sub _set_literal {
     return $_[0]{$_[1]} = $_[2];
+}
+
+{
+    my %supported = (
+	HTTP_Post	=> sub { return 1 },
+	SOAP		=> sub {
+	    return eval {
+		require SOAP::Lite;
+		1;
+	    };
+	},
+    );
+
+    sub _set_transport {
+	my ( $self, $name, $val ) = @_;
+	$supported{$val}
+	    or croak "Value '$val' not legal for attribute $name";
+	$supported{$val}->()
+	    or croak $@;
+	my $code = $self->can( "_request_$val" )
+	    or confess "Programming erroe - No method _request_$val";
+	$self->{_transport_handler} = $code;
+	return ( $self->{$name} = $val );
+    }
 }
 
 {
@@ -742,14 +746,10 @@ my $no_elevation_value_re = _make_matcher(
 
 sub _digest {
     my ($self, $rslt, $source) = @_;
-    if ( _instance( $rslt, 'SOAP::SOM' ) ) {
-	if ($rslt->fault) {
-	    return $self->_error($rslt->faultstring);
-	} else {
-	    $rslt = $rslt->result;
-	}
-    }
-    $self->{trace} and SOAP::Trace->import('-all');
+
+##  use YAML;
+##  warn 'Debug - response content is ', ref $rslt ? Dump( $rslt ) : $rslt;
+
     my $round;
     {
 	my $prec = $self->{places};
@@ -787,7 +787,7 @@ sub _digest {
 		"$rslt Source = '$source'" : $rslt;
 	}
     } else {
-	$error = "No data found in SOAP result";
+	$error = "No data found in query result";
     }
 
     $error
@@ -1021,35 +1021,193 @@ sub _make_matcher {	## no critic (RequireArgUnpacking)
 
 sub _normalize_id {return uc $_[0]}
 
-#	$soap_object = _soapdish ()
-
-#	Manufacture a SOAP::Lite object from the object's attributes.
-#	We need this because SOAP::Lite has changed significantly since
-#	the 2002 version that as of 2006 was still bundled with
-#	ActivePerl.
+#	$rslt = $self->_request( $service, %args );
 #
-#	We also set the error attribute and $@ to undef in preparation
-#	for a query.
+#	This private method requests data from the USGS' web service.
+#	The $service argument is the name of the specific request (
+#	'getAllElevations' or 'getElevation' ), and the %args are the
+#	arguments for the specific request. The return is a reference to
+#	a hash containing the parsed XML returned from the USGS.
+#
+#	But in fact this method simply dispatches the request to the
+#	handler specified by the 'transport' attribute.
 
-_set_clean_soapdish( qw{ default_ns proxy timeout } );
+sub _request {
+    my $handler = $_[0]{_transport_handler};
+    goto &$handler;
+}
 
-sub _soapdish {
-    my $self = shift;
-    $self->{trace} and SOAP::Trace->import ('all');
-    $self->{_soapdish} and return $self->{_soapdish};
-    my $conn = '';	# Other possibility is '#'.
-    my $act = sub {join $conn, @_};
-    my $soap = SOAP::Lite->can ('default_ns') ?
-	SOAP::Lite
-	    ->default_ns ($self->{default_ns})
-	    ->on_action ($act)
-	    ->proxy ($self->{proxy}, timeout => $self->{timeout}) :
-	SOAP::Lite
-	    ->envprefix ('soap')
-	    ->on_action ($act)
-	    ->uri ($self->{default_ns})
-	    ->proxy ($self->{proxy}, timeout => $self->{timeout});
-    return ( $self->{_soapdish} = $soap );
+#	$rslt = $self->_request_SOAP( $service, %args );
+#
+#	This private method requests data from the USGS' web service
+#	using the SOAP transport. It has the same signature as
+#	_request().
+#
+#	THIS METHOD SHOULD ONLY BE CALLED BY _request().
+
+sub _request_SOAP {
+    my ( $self, $service, %arg ) = @_;
+
+    my $rslt;
+
+    if ( exists $self->{_hack_result} ) {
+
+	$rslt = delete $self->{_hack_result};
+	'CODE' eq ref $rslt
+	    and $rslt = $rslt->( $self, $service, %arg );
+
+    } else {
+
+	my $soap = $self->{_transport_object} ||= do {
+	    my $conn = '';	# Other possibility is '#'.
+	    my $act = sub {join $conn, @_};
+	    my $soap = SOAP::Lite->can ('default_ns') ?
+	    SOAP::Lite
+		->default_ns ($self->{default_ns})
+		->on_action ($act)
+		->proxy ($self->{proxy}, timeout => $self->{timeout}) :
+	    SOAP::Lite
+		->envprefix ('soap')
+		->on_action ($act)
+		->uri ($self->{default_ns})
+		->proxy ($self->{proxy}, timeout => $self->{timeout});
+	};
+
+	$self->{trace} and SOAP::Trace->import ('all');
+
+	no warnings qw{ once };
+	local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
+
+	my @data;
+	while ( my ( $name, $val ) = each %arg ) {
+	    push @data, SOAP::Data->new(
+		name => $name,
+		type => 'string',
+		value => $val,
+	    );
+	}
+
+	$rslt = $soap->call(SOAP::Data->name ($service)->attr (
+		{xmlns => $self->{default_ns}}) => @data
+	);
+
+	$self->{trace} and SOAP::Trace->import('-all');
+
+    }
+
+    if ( _instance( $rslt, 'SOAP::SOM' ) ) {
+
+	if ( $rslt->fault &&
+	    $rslt->faultstring =~ m/ $bad_extent_re /smxo &&
+	    exists $arg{Source_Layer}
+	) {
+	    if (my $hash = $self->_get_bad_extent_hash($arg{Source_Layer})) {
+		$rslt = $hash;
+	    }
+	}
+
+	if ($rslt->fault) {
+	    return $self->_error($rslt->faultstring);
+	} else {
+	    $rslt = $rslt->result;
+	}
+
+    }
+
+    return $rslt;
+}
+
+#	$rslt = $self->_request_HTTP_Post( $service, %args );
+#
+#	This private method requests data from the USGS' web service
+#	using an HTTP Post request. It has the same signature as
+#	_request().
+#
+#	THIS METHOD SHOULD ONLY BE CALLED BY _request().
+
+sub _request_HTTP_Post {
+    my ( $self, $service, %arg ) = @_;
+
+    my $rslt;
+
+    if ( exists $self->{_hack_result} ) {
+
+	$rslt = delete $self->{_hack_result};
+	'CODE' eq ref $rslt
+	    and $rslt = $rslt->( $self, $service, %arg );
+
+    } else {
+
+	my $ua = $self->{_transport_object} ||=
+	    LWP::UserAgent->new( timeout => $self->{timeout} );
+
+	my $rqst = HTTP::Request::Common::POST(
+	    "$self->{proxy}/$service", \%arg );
+
+	$self->{trace} and print STDERR $rqst->as_string();
+	$rslt = $ua->request( $rqst );
+	$self->{trace} and print STDERR $rslt->as_string();
+    }
+
+    if ( _instance( $rslt, 'HTTP::Response' ) ) {
+
+	$rslt->is_success()
+	    or do {
+	    my $error = $rslt->status_line();
+	    chomp $error;
+	    die "$error\n";
+	};
+
+	$rslt = $rslt->content();
+
+	my $psr = $self->{_xml_parser} ||=
+	    XML::Parser->new( Style => 'Tree' );
+	$rslt = $psr->parse( $rslt );
+	$rslt = $self->_transform_xml( $rslt );
+
+    }
+
+    return $rslt;
+}
+
+#	my $resp = $self->_transform_xml( $xml );
+#
+#	This method takes as input the XML::Parser parse tree of the XML
+#	returned in response to an HTTP request to the USGS' elevation
+#	service, and transforms it, returning a reference to a hash that
+#	is supposed to be compatible with the hash returned by the
+#	corresponding SOAP::Lite request.
+#
+#	If a tree node has children other than literals, it calls itself
+#	recursively to parse them, and returns a hash keyed by the names
+#	of the children, and whose contents are the return generated by
+#	the recursive call. If a node has no children other than
+#	literals, it returns the concatenation of all non-white-space
+#	literals in the node.
+
+sub _transform_xml {
+    my ( $self, $parse ) = @_;
+    my @expand = @{ $parse };
+    my %rslt;
+    'HASH' eq ref $expand[0]
+	and shift @expand;
+    my @literal;
+    while ( @expand ) {
+	my ( $name, $content ) = splice @expand, 0, 2;
+	if ( ref $content ) {
+	    if ( exists $rslt{$name} ) {
+		ref $rslt{$name}
+		    or $rslt{$name} = [ $rslt{$name} ];
+		push @{ $rslt{$name} }, $self->_transform_xml(
+		    $content );
+	    } else {
+		$rslt{$name} = $self->_transform_xml( $content );
+	    }
+	} elsif ( $content !~ m/ \A \s* \z /smx ) {
+	    push @literal, $content;
+	}
+    }
+    return %rslt ? \%rslt : join ' ', @literal;
 }
 
 
@@ -1114,6 +1272,17 @@ sprintf "%.${places}f".
 
 The default is undef.
 
+=head3 transport (string)
+
+This attribute specifies the transport to use to access the USGS' web
+service. The legal values are C<'HTTP_Post'> and C<'SOAP'>. If you
+specify C<'SOAP'>, L<SOAP::Lite|SOAP::Lite> must be installed.
+
+It is my current intent to drop this attribute before the next
+production release.
+
+The default is C<'HTTP_Post'>.
+
 =head3 proxy (string)
 
 This attribute specifies the actual url to which the SOAP query is
@@ -1128,7 +1297,7 @@ if the USGS changes the WSDL and this module has not been modified to
 track the change.
 
 The default is
-'http://gisdata.usgs.gov/xmlwebservices2/elevation_service.asmx'.
+C<'http://gisdata.usgs.gov/XMLWebServices2/Elevation_Service.asmx'>.
 
 =head3 retry (unsigned integer)
 
