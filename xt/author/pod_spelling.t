@@ -22,15 +22,20 @@ all_pod_files_spelling_ok ();
 __DATA__
 CONUS
 CUBITS
+dataset
 Dru
 GEOID
 Geoid
+GPS
 IDs
 InvalidCastException
+merchantability
 Milbert
 NAD
+namespace
 NAVD
 NED
+Ph
 Survey's
 USGS
 WGS
@@ -44,3 +49,4 @@ conterminous
 geoid
 gory
 url
+wildcard
