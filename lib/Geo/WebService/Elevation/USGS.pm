@@ -13,15 +13,18 @@ Geo::WebService::Elevation::USGS - Elevation queries against USGS web services.
 
 =head1 NOTICE
 
-This module is being converted to use a plain HTTP Post as the
-transport, rather than SOAP, due to the slowness of SOAP::Lite in fixing
-test errors.
+This module has been converted to use HTTP Post instead of SOAP as a
+transport, due to the slowness of SOAP::Lite in fixing test errors.
 
-This development release has an attribute, 'transport', that selects the
-transport to be used: 'HTTP_Post' (the default), or 'SOAP'. It is my
-intent to make a production release the end of July 2011, which retracts
-the 'transport' attribute and the SOAP functionality. If someone really
-needs SOAP for some reason, please contact me, and I may reconsider.
+In the transition version, 0.007_01, the C<'transport'> attribute was
+made available to select which transport was used. That module also
+documented that this attribute would be revoked in the next production
+version unless I got feedback to the contrary.
+
+It is now time for the production release, and I have received no
+feedback (either asking for the retention of SOAP::Lite or otherwise).
+So with this release, support for SOAP as a transport is revoked, as is
+the C<'transport'> attribute.
 
 =head1 DESCRIPTION
 
@@ -160,7 +163,6 @@ sub new {
 	default_ns	=> 'http://gisdata.usgs.gov/XMLWebServices2/',
 	error	=> undef,
 	places	=> undef,
-##	transport => 'HTTP_Post',	# Explicitly set below.
 	proxy	=>
 	    'http://gisdata.usgs.gov/XMLWebServices2/Elevation_Service.asmx',
 	retry	=> 0,
@@ -173,8 +175,6 @@ sub new {
     };
     bless $self, $class;
     @args and $self->set(@args);
-    $self->{transport}
-	or $self->set( transport => 'HTTP_Post' );
     return $self;
 }
 
@@ -184,7 +184,6 @@ my %mutator = (
     default_ns	=> \&_set_literal,
     error	=> \&_set_literal,
     places	=> \&_set_integer_or_undef,
-    transport	=> \&_set_transport,
     proxy	=> \&_set_literal,
     retry	=> \&_set_unsigned_integer,
     retry_hook	=> \&_set_hook,
@@ -657,30 +656,6 @@ sub _set_literal {
 }
 
 {
-    my %supported = (
-	HTTP_Post	=> sub { return 1 },
-	SOAP		=> sub {
-	    return eval {
-		require SOAP::Lite;
-		1;
-	    };
-	},
-    );
-
-    sub _set_transport {
-	my ( $self, $name, $val ) = @_;
-	$supported{$val}
-	    or croak "Value '$val' not legal for attribute $name";
-	$supported{$val}->()
-	    or croak $@;
-	my $code = $self->can( "_request_$val" )
-	    or confess "Programming erroe - No method _request_$val";
-	$self->{_transport_handler} = $code;
-	return ( $self->{$name} = $val );
-    }
-}
-
-{
     my %supported = map {$_ => 1} qw{ARRAY CODE HASH Regexp};
     sub _set_source {
 	my ($self, $name, $val) = @_;
@@ -1029,92 +1004,13 @@ sub _normalize_id {return uc $_[0]}
 #	arguments for the specific request. The return is a reference to
 #	a hash containing the parsed XML returned from the USGS.
 #
-#	But in fact this method simply dispatches the request to the
-#	handler specified by the 'transport' attribute.
+#	During the transition from SOAP to HTTP Post as a transport
+#	(i.e. version 0.007_01) this dispatched based on the now-revoked
+#	'transport' attribute. But that attribute is revoked, and this
+#	method is now a trampoline to the HTTP Post logic.
 
 sub _request {
-    my $handler = $_[0]{_transport_handler};
-    goto &$handler;
-}
-
-#	$rslt = $self->_request_SOAP( $service, %args );
-#
-#	This private method requests data from the USGS' web service
-#	using the SOAP transport. It has the same signature as
-#	_request().
-#
-#	THIS METHOD SHOULD ONLY BE CALLED BY _request().
-
-sub _request_SOAP {
-    my ( $self, $service, %arg ) = @_;
-
-    my $rslt;
-
-    if ( exists $self->{_hack_result} ) {
-
-	$rslt = delete $self->{_hack_result};
-	'CODE' eq ref $rslt
-	    and $rslt = $rslt->( $self, $service, %arg );
-
-    } else {
-
-	my $soap = $self->{_transport_object} ||= do {
-	    my $conn = '';	# Other possibility is '#'.
-	    my $act = sub {join $conn, @_};
-	    my $soap = SOAP::Lite->can ('default_ns') ?
-	    SOAP::Lite
-		->default_ns ($self->{default_ns})
-		->on_action ($act)
-		->proxy ($self->{proxy}, timeout => $self->{timeout}) :
-	    SOAP::Lite
-		->envprefix ('soap')
-		->on_action ($act)
-		->uri ($self->{default_ns})
-		->proxy ($self->{proxy}, timeout => $self->{timeout});
-	};
-
-	$self->{trace} and SOAP::Trace->import ('all');
-
-	no warnings qw{ once };
-	local $SOAP::Constants::DO_NOT_USE_CHARSET = 1;
-
-	my @data;
-	while ( my ( $name, $val ) = each %arg ) {
-	    push @data, SOAP::Data->new(
-		name => $name,
-		type => 'string',
-		value => $val,
-	    );
-	}
-
-	$rslt = $soap->call(SOAP::Data->name ($service)->attr (
-		{xmlns => $self->{default_ns}}) => @data
-	);
-
-	$self->{trace} and SOAP::Trace->import('-all');
-
-    }
-
-    if ( _instance( $rslt, 'SOAP::SOM' ) ) {
-
-	if ( $rslt->fault &&
-	    $rslt->faultstring =~ m/ $bad_extent_re /smxo &&
-	    exists $arg{Source_Layer}
-	) {
-	    if (my $hash = $self->_get_bad_extent_hash($arg{Source_Layer})) {
-		$rslt = $hash;
-	    }
-	}
-
-	if ($rslt->fault) {
-	    return $self->_error($rslt->faultstring);
-	} else {
-	    $rslt = $rslt->result;
-	}
-
-    }
-
-    return $rslt;
+    goto &_request_HTTP_Post;
 }
 
 #	$rslt = $self->_request_HTTP_Post( $service, %args );
@@ -1271,17 +1167,6 @@ will be rounded to this number of decimal places by running them through
 sprintf "%.${places}f".
 
 The default is undef.
-
-=head3 transport (string)
-
-This attribute specifies the transport to use to access the USGS' web
-service. The legal values are C<'HTTP_Post'> and C<'SOAP'>. If you
-specify C<'SOAP'>, L<SOAP::Lite|SOAP::Lite> must be installed.
-
-It is my current intent to drop this attribute before the next
-production release.
-
-The default is C<'HTTP_Post'>.
 
 =head3 proxy (string)
 
