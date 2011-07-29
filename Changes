@@ -1,3 +1,8 @@
+0.008		29-Jul-2011	T. R. Wyant
+  Remove the 'transport' attribute, and all SOAP::Lite code, as
+    threatened in the 0.007_01 release. All interaction with the USGS
+    web site now uses HTTP Post.
+
 0.007_01	29-Jun-2011	T. R. Wyant
   Add the ability to use an HTTP Post request as a transport instead of
     SOAP. The transport used is selected by the 'transport' attribute,
