@@ -6,15 +6,22 @@ use warnings;
 use Test::More;
 
 use constant BAD_EXTENT_SOURCE => 'NED.AK_NED';
+use constant NO_DATA_FOUND_RE => qr{ \A \QNo data found in query result}smx;
 
-_skip_it(eval {require Geo::WebService::Elevation::USGS},
+our $TEST_TRANSPORT ||= 'HTTP_Post';
+
+_skip_it(eval { require Geo::WebService::Elevation::USGS; 1; },
     'Unable to load Geo::WebService::Elevation::USGS');
 
-_skip_it(eval {require LWP::UserAgent},
+_skip_it(eval { require LWP::UserAgent; 1; },
     'Unable to load LWP::UserAgent (should not happen)');
 
-my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(places => 2)},
-    'Unable to instantiate GEO::Elevation::USGS');
+_skip_it(eval { require HTTP::Response; 1; },
+    'Unable to load HTTP::Response (should not happen)');
+
+my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(
+	    places => 2, transport => $TEST_TRANSPORT )},
+    'Unable to instantiate Geo::WebService::Elevation::USGS');
 
 {
     my $ua = _skip_it(eval {LWP::UserAgent->new()},
@@ -30,7 +37,7 @@ my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(places => 2)},
 	"Unable to access $pxy");
 }
 
-plan (tests => 170);
+plan (tests => 174);
 
 my $ele_dataset = 'Elev_DC_Washington';	# Expected data set
 my $ele_re = qr{ \A Elev_DC }smx;	# Regexp for data set
@@ -229,7 +236,7 @@ SKIP: {
     ok( ref $rslt eq 'HASH', 'getElevation result is a hash ref' );
     is( $rslt->{Elevation}, 'BAD_EXTENT', 'getElevation returned bad extent' );
 
-    $bogus->{_hack_result} = _get_bad_som();
+    $bogus->{_hack_result} = $ele->_get_bad_som();
     $rslt = eval {$bogus->getElevation( @ele_loc , undef, 1)};
     ok($bogus->get('error'),
 	'getElevation() SOAP failures other than BAD_EXTENT conversion are errors.');
@@ -278,7 +285,7 @@ SKIP: {
     $bogus->set(source => []);
     $bogus->{_hack_result} = undef;
     $rslt = eval {$bogus->elevation( @ele_loc )};
-    like($@, qr{^No data found in SOAP result},
+    like($@, NO_DATA_FOUND_RE,
 	'No data error when going through getAllElevations');
 
     $bogus->set(croak => 0, carp => 1);
@@ -289,7 +296,7 @@ SKIP: {
     like( $msg, qr{ \A No \s data \s found \b }smx,
 	'Should warn if croak is false but carp is true' );
     ok(!$rslt, 'Should return undef on bad result if croak is false');
-    like($bogus->get('error'), qr{^No data found in SOAP result},
+    like($bogus->get('error'), NO_DATA_FOUND_RE,
 	'No data error when going through getAllElevations');
 
     $msg = undef;
@@ -300,7 +307,18 @@ SKIP: {
 	or diag($@);
     ok( ! defined $msg, 'Should not warn if carp is false' );
     ok(!$rslt, 'Should return undef on bad result if croak is undef');
-    like($bogus->get('error'), qr{^No data found in SOAP result},
+    like($bogus->get('error'), NO_DATA_FOUND_RE,
+	'No data error when going through getAllElevations');
+
+    $msg = undef;
+    $bogus->set(carp => 0);
+    $bogus->{_hack_result} = sub { die 'Artificial failure' };
+    $rslt = eval {$bogus->elevation( @ele_loc )};
+    ok(!$@, 'Should not throw an error on exception if croak is false')
+	or diag($@);
+    ok( ! defined $msg, 'Should not warn on exception if carp is false' );
+    ok(!$rslt, 'Should return undef on exception if croak is undef');
+    like($bogus->get('error'), qr{ \A \QArtificial failure\E \b}smx,
 	'No data error when going through getAllElevations');
 
     SKIP: {
@@ -320,13 +338,13 @@ SKIP: {
 	    "@{[ BAD_EXTENT_SOURCE ]} still does not return a valid elevation");
     }
 
-    $bogus->{_hack_result} = _get_bad_som();
+    $bogus->{_hack_result} = $ele->_get_bad_som();
     $rslt = eval {$bogus->elevation( @ele_loc )};
     ok($bogus->get('error'),
 	'SOAP failures other than conversion of BAD_EXTENT are still errors.');
 
     $bogus->set(croak => 1);
-    $bogus->{_hack_result} = _get_bad_som();
+    $bogus->{_hack_result} = $ele->_get_bad_som();
     $rslt = eval {$bogus->elevation( @ele_loc )};
     ok($@,
 	'SOAP failures other than conversion are fatal with croak => 1');
@@ -350,7 +368,7 @@ SKIP: {
     $bogus->set(source => undef, croak => 1);
     $bogus->{_hack_result} = undef;
     $rslt = eval {$bogus->elevation( @ele_loc )};
-    like($@, qr{^No data found in SOAP result},
+    like($@, NO_DATA_FOUND_RE,
 	'No data error when going through getElevations');
 
     $bogus->set(croak => 0);
@@ -359,7 +377,7 @@ SKIP: {
     ok(!$@, 'Should not throw an error on bad result if croak is false')
 	or diag($@);
     ok(!$rslt, 'Should return undef on bad result if croak is false');
-    like($bogus->get('error'), qr{^No data found in SOAP result},
+    like($bogus->get('error'), NO_DATA_FOUND_RE,
 	'No data error when going through getElevation');
 
     $bogus->{_hack_result} = {};
@@ -467,7 +485,7 @@ SKIP: {
 
     SKIP: {
 	$retries = 0;
-	$bogus->{_hack_result} = _get_bad_som();
+	$bogus->{_hack_result} = $ele->_get_bad_som();
 	$rslt = eval {$bogus->getElevation( @ele_loc )};
 	ok( $retries, 'A retry was performed' );
 	_skip_on_server_error($bogus, 6);
@@ -482,7 +500,7 @@ SKIP: {
 
     SKIP: {
 	$retries = 0;
-	$bogus->{_hack_result} = _get_bad_som();
+	$bogus->{_hack_result} = $ele->_get_bad_som();
 	$rslt = eval {$bogus->getAllElevations( @ele_loc )};
 	ok( $retries, 'A retry was performed' );
 	_skip_on_server_error($bogus, 6);
@@ -505,7 +523,7 @@ SKIP: {
 	} or skip( "Unable to load Time::HiRes", 2 );
 	$retries = 0;
 	Geo::WebService::Elevation::USGS->set( throttle => 5 );
-	$bogus->{_hack_result} = _get_bad_som();
+	$bogus->{_hack_result} = $ele->_get_bad_som();
 	my $start = Time::HiRes::time();
 	$rslt = eval {$bogus->getElevation( @ele_loc )};
 	my $finish = Time::HiRes::time();
@@ -699,8 +717,12 @@ sub Geo::Point::latlong {
     return ( @{ $_[0] } )
 }
 
-my $VAR1;
-sub _get_bad_som {
+my ( $VAR1, $VAR2 );
+sub Geo::WebService::Elevation::USGS::_get_bad_som {
+    my ( $self ) = @_;
+    'HTTP_Post' eq $self->get( 'transport' )
+	and return ( $VAR2 ||= HTTP::Response->new(
+	    500, 'Internal Server Error' ) );
     return ($VAR1 ||= bless( {
                  '_content' => [
                                  'soap:Envelope',
