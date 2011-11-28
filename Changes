@@ -1,3 +1,6 @@
+0.009		27-Nov-2011	T. R. Wyant
+  Correct the address of the FSF in the GNU GPL (LICENSES/Copying)
+
 0.008		29-Jul-2011	T. R. Wyant
   Remove the 'transport' attribute, and all SOAP::Lite code, as
     threatened in the 0.007_01 release. All interaction with the USGS

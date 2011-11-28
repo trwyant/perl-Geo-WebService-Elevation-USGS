@@ -108,7 +108,7 @@ use LWP::UserAgent;
 use Scalar::Util 1.10 qw{ blessed looks_like_number };
 use XML::Parser;
 
-our $VERSION = '0.008';
+our $VERSION = '0.009';
 
 use constant BEST_DATA_SET => -1;
 
