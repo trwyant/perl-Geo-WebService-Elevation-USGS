@@ -31,6 +31,8 @@ sub requires {
 	'HTTP::Request::Common'	=> 0,
 	'LWP::UserAgent'	=> 0,
 	'Scalar::Util'		=> 1.10,
+	'strict'		=> 0,
+	'warnings'		=> 0,
 	'XML::Parser'		=> 0,
 	@extra,
     };
