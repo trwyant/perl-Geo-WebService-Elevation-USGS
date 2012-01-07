@@ -14,6 +14,7 @@ META.yml
 README
 t/basic.t
 t/elev.t
+xt/author/changes.t
 xt/author/critic.t
 xt/author/executable.t
 xt/author/kwalitee.t
