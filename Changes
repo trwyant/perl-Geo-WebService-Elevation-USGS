@@ -1,3 +1,7 @@
+0.010		2012-01-06	T. R. Wyant
+  Bring Changes file into compliance with Test::CPAN::Changes, and add
+    author test xt/author/changes.t to be sure it stays that way.
+
 0.009		2011-11-27	T. R. Wyant
   Correct the address of the FSF in the GNU GPL (LICENSES/Copying)
 
