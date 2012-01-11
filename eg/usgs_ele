@@ -1,12 +1,17 @@
 #!/usr/local/bin/perl
 
-# This is a simple script that allows use of Geo::WebService::Elevation::USGS from
-# the command line.
+# This is a simple script that allows use of
+# Geo::WebService::Elevation::USGS from the command line.
+
+use 5.006002;
 
 use strict;
 use warnings;
 
 use Geo::WebService::Elevation::USGS;
+use Pod::Usage;
+
+our $VERSION = '0.010';
 
 BEGIN {
     eval {
@@ -18,10 +23,9 @@ BEGIN {
 # Output is by whatever dumper is available.
 
 my $dumper = eval {
-    require YAML and YAML->can('Dump')} || eval {
-    require YAML::Syck and YAML::Syck->can('Dump')} || eval {
+    require YAML::Any and YAML::Any->can('Dump')} || eval {
     require Data::Dumper and Data::Dumper->can('Dumper')}
-    or die "Can not load YAML or YAML::Syck or Data::Dumper";
+    or die "Can not load YAML::Any or Data::Dumper";
 
 # If interactive, input is by Term::ReadLine if available, or a simple
 # subroutine otherwise. If not interactive, we just read STDIN.
@@ -108,29 +112,8 @@ sub cmd_exit {
 # The help command displays very brief help.
 
 sub cmd_help {
-    return <<'EOD';
-
-Possible commands:
-
-attributes - list names and values of all
-    Geo::WebService::Elevation::USGS attributes;
-exit - terminate this script (end-of-file also works);
-get name - display the value of the named attribute;
-getAllElevations lat lon - get all available elevation
-    values for the given latitude and longitude;
-getElevation lat lon - get the 'best' elevation value
-    for the given latitude and longitude;
-help - display this text;
-new - create a new Geo::WebService::Elevation::USGS object;
-set name value - Set the named attribute to the given
-    value;
-sources - set source attribute to array of arguments;
-throttle - displays or changes
-    $Geo::WebService::Elevation::USGS::THROTTLE.
-
-South latitudes and west longitudes are negative.
-
-EOD
+    pod2usage( { -verbose => 2, exitval => 'NOEXIT' } );
+    return;
 }
 
 # The 'new' command wraps the Geo::WebService::Elevation::USGS 'new',
@@ -154,5 +137,102 @@ sub cmd_throttle {
     @_ and $Geo::WebService::Elevation::USGS::THROTTLE = $_[0];
     return $Geo::WebService::Elevation::USGS::THROTTLE;
 }
+
+__END__
+
+=head1 TITLE
+
+usgs_ele - Interactive script to access USGS elevation data
+
+=head1 SYNOPSIS
+
+ usgs_ele
+ usgs_ele> help
+ usgs_ele> exit
+
+=head1 OPTIONS
+
+None.
+
+=head1 DETAILS
+
+This is an interactive Perl script to access the USGS elevation data.
+
+Possible commands:
+
+=head2 attributes
+
+This command lists the names and values of all
+Geo::WebService::Elevation::USGS attributes.
+
+=head2 exit
+
+This command terminates this script. End-of-file also works.
+
+=head2 get
+
+ usgs_ele> get units
+
+This command displays the value of the attribute named in the command.
+
+=head2 getAllElevations
+
+ usgs_ele> getAllElevations lat lon
+
+This command displays all available elevation values for the given
+latitude and longitude. The latitude and longitude are in degrees, with
+south latitude and west longitude being negative.
+
+=head2 getElevation
+
+ usgs_ele> getElevation lat lon
+
+This command displays the 'best' elevation value for the given latitude
+and longitude. The latitude and longitude are in degrees, with south
+latitude and west longitude being negative.
+
+=head2 help
+
+This command displays this text.
+
+=head2 new
+
+This command creates a new Geo::WebService::Elevation::USGS object.
+
+=head2 set
+
+ usgs_ele> set units METERS
+
+This command sets the given attribute to the given value.
+
+=head2 sources
+
+ usgs_ele> sources Elev_DC_Washington Elev_DE_SussexCounty
+
+This command sets the C<source> attribute to a reference to an array
+containing its arguments.
+
+=head2 throttle
+
+This command displays (without an argument) or changes (with an
+argument) the value of C<$Geo::WebService::Elevation::USGS::THROTTLE>.
+
+=head1 AUTHOR
+
+Thomas R. Wyant, III F<wyant at cpan dot org>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2008-2012 by Thomas R. Wyant, III
+
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl 5.10.0. For more details, see the full text
+of the licenses in the directory LICENSES.
+
+This program is distributed in the hope that it will be useful, but
+without any warranty; without even the implied warranty of
+merchantability or fitness for a particular purpose.
+
+=cut
 
 # ex: set textwidth=72 :
