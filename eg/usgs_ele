@@ -23,9 +23,9 @@ BEGIN {
 # Output is by whatever dumper is available.
 
 my $dumper = eval {
-    require YAML::Any and YAML::Any->can('Dump')} || eval {
+    require YAML and YAML->can('Dump')} || eval {
     require Data::Dumper and Data::Dumper->can('Dumper')}
-    or die "Can not load YAML::Any or Data::Dumper";
+    or die "Can not load YAML or Data::Dumper";
 
 # If interactive, input is by Term::ReadLine if available, or a simple
 # subroutine otherwise. If not interactive, we just read STDIN.
