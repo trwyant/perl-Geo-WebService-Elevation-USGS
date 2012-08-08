@@ -526,8 +526,8 @@ about it.
 
 =cut
 
-my $bad_extent_re = _make_matcher(
-    q{Conversion from string "BAD_EXTENT" to type 'Double'} );
+# my $bad_extent_re = _make_matcher(
+#     q{Conversion from string "BAD_EXTENT" to type 'Double'} );
 
 sub getElevation {
     my ($self, $lat, $lon, $source, $only) = _latlon( @_ );
