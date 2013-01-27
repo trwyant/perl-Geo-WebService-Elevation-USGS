@@ -526,9 +526,6 @@ about it.
 
 =cut
 
-# my $bad_extent_re = _make_matcher(
-#     q{Conversion from string "BAD_EXTENT" to type 'Double'} );
-
 sub getElevation {
     my ($self, $lat, $lon, $source, $only) = _latlon( @_ );
     defined $source or $source = BEST_DATA_SET;
@@ -716,8 +713,8 @@ sub _set_use_all_limit {
 #	error reported in the SOAP packet in lieu of the actual data
 #	(i.e. when the no SOAP error was reported).
 
-my $no_elevation_value_re = _make_matcher(
-    q{ERROR: No Elevation value was returned} );
+my $no_elevation_value_re =
+    qr{ERROR: No Elevation values? (?:was|were) returned}smi;
 
 sub _digest {
     my ($self, $rslt, $source) = @_;
@@ -944,16 +941,6 @@ sub _instance {
 	}
 	return ($self, $obj, @args);
     }
-}
-
-sub _make_matcher {	## no critic (RequireArgUnpacking)
-    my $string = join ' ', @_;
-    $string =~ s/ [ ] / [ ] /smxg;
-    $string =~ m/ \A \w /smx
-	and substr $string, 0, 0, '\b ';
-    $string =~ m/ \w \z /smx
-	and $string .= ' \b';
-    return qr{ $string }smx;
 }
 
 {
