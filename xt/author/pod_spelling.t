@@ -22,7 +22,7 @@ all_pod_files_spelling_ok ();
 __DATA__
 CONUS
 CUBITS
-dataset
+Dataset
 Dru
 GEOID
 Geoid
