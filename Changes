@@ -1,3 +1,8 @@
+0.011		2013-01-27	T. R. Wyant
+  Fix error handling to deal with change in error message (from "No
+    elevation value was returned" to "No elevation values were
+    returned").
+
 0.010		2012-01-06	T. R. Wyant
   Bring Changes file into compliance with Test::CPAN::Changes, and add
     author test xt/author/changes.t to be sure it stays that way.
