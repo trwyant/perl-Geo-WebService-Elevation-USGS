@@ -48,7 +48,8 @@ my $rslt;
 SKIP: {
     $rslt = eval {$ele->getElevation( @ele_loc )};
     _skip_on_server_error($ele, 6);
-    ok(!$@, 'getElevation succeeded') or diag($@);
+    ok(!$@, 'getElevation succeeded')
+	or _skip_tests( 6 );
     ok($rslt, 'getElevation returned a result');
     is(ref $rslt, 'HASH', 'getElevation returned a hash');
     is( $rslt->{Data_ID}, $ele_dataset,
@@ -60,14 +61,16 @@ SKIP: {
 SKIP: {
     $rslt = eval {$ele->getElevation( @ele_loc , undef, 1)};
     _skip_on_server_error($ele, 2);
-    ok(!$@, 'getElevation (only) succeeded') or diag($@);
+    ok(!$@, 'getElevation (only) succeeded')
+	or _skip_tests( 2 );
     is($rslt, $ele_ft, "getElevation (only) returned $ele_ft");
 }
 
 SKIP: {
     $rslt = eval {$ele->elevation( @ele_loc )};
     _skip_on_server_error($ele, 7);
-    ok(!$@, 'elevation() succeeded') or diag($@);
+    ok(!$@, 'elevation() succeeded')
+	or _skip_tests( 7 );
     is(ref $rslt, 'ARRAY', 'elevation() returned an array');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '==', 1, 'elevation() returned a single result');
@@ -85,7 +88,7 @@ SKIP: {
 
     _skip_on_server_error($ele, 2);
     ok(!$@, 'getElevation does not fail when data has bad extent')
-	or diag($@);
+	or _skip_tests( 2 );
     ok(!$ele->is_valid($rslt),
 	'getElevation does not return a valid elevation when given a bad extent');
 
@@ -111,7 +114,8 @@ is(ref ($ele->get('source')), 'ARRAY', 'Source can be set to an array ref');
 SKIP: {
     $rslt = eval {$ele->elevation( @ele_loc )};
     _skip_on_server_error($ele, 7);
-    ok(!$@, 'elevation() still succeeds') or diag($@);
+    ok(!$@, 'elevation() still succeeds')
+	or _skip_tests( 7 );
     is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '>', 1, 'elevation() returned multiple results');
@@ -129,7 +133,8 @@ is(ref ($ele->get('source')), 'HASH', 'Source can be set to a hash ref');
 SKIP: {
     $rslt = eval {$ele->elevation( @ele_loc )};
     _skip_on_server_error($ele, 7);
-    ok(!$@, 'elevation() with hash source still succeeds') or diag($@);
+    ok(!$@, 'elevation() with hash source still succeeds')
+	or _skip_tests( 7 );
     is(ref $rslt, 'ARRAY',
 	'elevation() with hash source still returns an array');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
@@ -149,7 +154,8 @@ SKIP: {
     );
     $rslt = eval {$ele->elevation( @ele_loc )};
     _skip_on_server_error($ele, 7);
-    ok(!$@, 'elevation() still succeeds') or diag($@);
+    ok(!$@, 'elevation() still succeeds')
+	or _skip_tests( 7 );
     is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '==', 3, 'elevation() returned three results');
@@ -173,11 +179,8 @@ $ele->set(
 SKIP: {
     $rslt = eval {$ele->elevation( @ele_loc )};
     _skip_on_server_error($ele, 7);
-    my $err = $@;
-    ok(!$err, 'elevation() done by iteration succeeds') or do {
-	diag ("Error: $err");
-	skip("Elevation by iteration failed: $err", 6);
-    };
+    ok(!$@, 'elevation() done by iteration succeeds')
+	or _skip_tests( 7 );
     is(ref $rslt, 'ARRAY', 'elevation() still returns an array');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '==', 4, 'elevation() returned four results');
@@ -192,11 +195,8 @@ SKIP: {
 SKIP: {
     $rslt = eval {$ele->elevation( @ele_loc , 1)};
     _skip_on_server_error($ele, 7);
-    my $err = $@;
-    ok(!$err, 'elevation(valid) succeeds') or do {
-	diag ("Error: $err");
-	skip("Elevation(valid) failed: $err", 6);
-    };
+    ok(!$@, 'elevation(valid) succeeds')
+	or _skip_tests( 7 );
     is(ref $rslt, 'ARRAY', 'elevation(valid) still returns an array');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '==', 3, 'elevation(valid) returned three results')
@@ -229,10 +229,13 @@ SKIP: {
     is($rslt, '58.6035683399111',
 	'getElevation (only) returned 58.6035683399111');
 
-    $rslt = eval {$bogus->getElevation(40, 90, 'NED.CONUS_NED_13E')};
-    ok(!$@, 'getElevation without returned value succeeded') or diag($@);
-    ok( ref $rslt eq 'HASH', 'getElevation result is a hash ref' );
-    is( $rslt->{Elevation}, 'BAD_EXTENT', 'getElevation returned bad extent' );
+    SKIP: {
+	$rslt = eval {$bogus->getElevation(40, 90, 'NED.CONUS_NED_13E')};
+	ok(!$@, 'getElevation without returned value succeeded')
+	    or _skip_tests( 3 );
+	ok( ref $rslt eq 'HASH', 'getElevation result is a hash ref' );
+	is( $rslt->{Elevation}, 'BAD_EXTENT', 'getElevation returned bad extent' );
+    }
 
     $bogus->{_hack_result} = $ele->_get_bad_som();
     $rslt = eval {$bogus->getElevation( @ele_loc , undef, 1)};
@@ -270,7 +273,8 @@ SKIP: {
     SKIP: {
 	$rslt = eval {$bogus->elevation( @ele_loc )};
 	_skip_on_server_error($bogus, 5);
-	ok(!$@, 'elevation succeeded using code ref as source') or diag($@);
+	ok(!$@, 'elevation succeeded using code ref as source')
+	    or _skip_tests( 5 );
 	ok($rslt, 'Got a result when using code ref as source');
 	is(ref $rslt, 'ARRAY', 'Got array ref when using code ref as source');
 	ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
@@ -487,7 +491,8 @@ SKIP: {
 	$rslt = eval {$bogus->getElevation( @ele_loc )};
 	ok( $retries, 'A retry was performed' );
 	_skip_on_server_error($bogus, 6);
-	ok(!$@, 'getElevation succeeded on retry') or diag($@);
+	ok(!$@, 'getElevation succeeded on retry')
+	    or _skip_tests( 6 );
 	ok($rslt, 'getElevation returned a result on retry');
 	is(ref $rslt, 'HASH', 'getElevation returned a hash on retry');
 	is( $rslt->{Data_ID}, $ele_dataset,
@@ -502,7 +507,8 @@ SKIP: {
 	$rslt = eval {$bogus->getAllElevations( @ele_loc )};
 	ok( $retries, 'A retry was performed' );
 	_skip_on_server_error($bogus, 6);
-	ok(!$@, 'getAllElevations succeeded on retry') or diag($@);
+	ok(!$@, 'getAllElevations succeeded on retry')
+	    or _skip_tests( 6 );
 	ok($rslt, 'getAllElevations returned a result on retry');
 	is(ref $rslt, 'ARRAY', 'getAllElevations returned an array on retry');
 	my %hash = map { $_->{Data_ID} => $_ } @{ $rslt };
@@ -551,7 +557,8 @@ $ele->set(
 SKIP: {
     $rslt = eval {$ele->getElevation( @ele_loc )};
     _skip_on_server_error($ele, 6);
-    ok(!$@, 'getElevation again succeeded') or diag($@);
+    ok(!$@, 'getElevation again succeeded')
+	or _skip_tests( 6 );
     ok($rslt, 'getElevation again returned a result');
     is(ref $rslt, 'HASH', 'getElevation again returned a hash');
     is( $rslt->{Data_ID}, $ele_dataset, "Data again came from $ele_dataset" );
@@ -562,14 +569,16 @@ SKIP: {
 SKIP: {
     $rslt = eval {$ele->getElevation( @ele_loc , undef, 1)};
     _skip_on_server_error($ele, 2);
-    ok(!$@, 'getElevation(only) succeeded') or diag($@);
+    ok(!$@, 'getElevation(only) succeeded')
+	or _skip_tests( 2 );
     is($rslt, $ele_mt, "getElevation (only) returned $ele_mt");
 }
 
 SKIP: {
     $rslt = eval {[$ele->elevation( @ele_loc )]};
     _skip_on_server_error($ele, 7);
-    ok(!$@, 'elevation() succeeded in list context') or diag($@);
+    ok(!$@, 'elevation() succeeded in list context')
+	or _skip_tests( 7 );
     is(ref $rslt, 'ARRAY', 'elevation() returns an array in list context');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '==', 1, 'elevation() returned a single result');
@@ -594,7 +603,8 @@ is(ref $ele->get('source'), 'Regexp', 'Can set source as a regexp ref');
 SKIP: {
     $rslt = eval {[$ele->elevation( @ele_loc )]};
     _skip_on_server_error($ele, 6);
-    ok(!$@, 'elevation() succeeded with regexp source') or diag($@);
+    ok(!$@, 'elevation() succeeded with regexp source')
+	or _skip_tests( 6 );
     is(ref $rslt, 'ARRAY', 'Get an array back from regexp source');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
     cmp_ok(scalar @$rslt, '>=', 1, 'Should have at least one result');
@@ -611,7 +621,8 @@ is(ref $ele->get('source'), 'HASH', 'Can set source as a hash');
 SKIP: {
     $rslt = eval {$ele->elevation($gp)};
     _skip_on_server_error($ele, 7);
-    ok(!$@, 'elevation(Geo::Point) succeeded') or diag($@);
+    ok(!$@, 'elevation(Geo::Point) succeeded')
+	or _skip_tests( 7 );
     is(ref $rslt, 'ARRAY',
 	'elevation(Geo::Point) returns an array from getAllElevations');
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
@@ -628,7 +639,8 @@ SKIP: {
     $ele->set(use_all_limit => -1);	# Force iteration.
     $rslt = eval {$ele->elevation($gp)};
     _skip_on_server_error($ele, 2);
-    ok(!$@, 'elevation(Geo::Point) via getElevation succeeded') or diag($@);
+    ok(!$@, 'elevation(Geo::Point) via getElevation succeeded')
+	or _skip_tests( 2 );
     is(ref $rslt, 'ARRAY',
 	'elevation(Geo::Point) returns an array from getElevation');
 }
@@ -651,7 +663,7 @@ SKIP: {
     $rslt = eval {$ele->elevation($gp)};
     _skip_on_server_error($ele, 7);
     ok(!$@, "elevation($kind) via getAllElevations succeeded")
-	or diag($@);
+	or _skip_tests( 7 );
     is(ref $rslt, 'ARRAY',
 	"elevation($kind) returns an array from getAllElevations");
     ref $rslt eq 'ARRAY' or $rslt = [];	# To keep following from blowing up.
@@ -665,6 +677,13 @@ SKIP: {
 }
 
 _skip_on_server_summary();
+
+sub _skip_tests {
+    my ( $count ) = @_;
+    diag $@;
+    skip 'Query failed', $count - 1;
+    return;	# Never executed.
+}
 
 # I need to mung the argument list before use because the idea is to
 # call this with an indication of whether to skip the whole test and
