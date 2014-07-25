@@ -13,23 +13,60 @@ Geo::WebService::Elevation::USGS - Elevation queries against USGS web services.
 
 =head1 NOTICE
 
-This module has been converted to use HTTP Post instead of SOAP as a
-transport, due to the slowness of SOAP::Lite in fixing test errors.
+The GIS data web service this module was originally based on has gone
+the way of the dodo. This release uses the NAD service, which is similar
+but simpler. I have taken advantage of the new service's ability to
+provide output in JSON to simplify processing, and have added a
+compatibility mode to make the output from the new service as much like
+the output of the old as possible, but there are still differences:
 
-In the transition version, 0.007_01, the C<'transport'> attribute was
-made available to select which transport was used. That module also
-documented that this attribute would be revoked in the next production
-version unless I got feedback to the contrary.
+* The new service does not expose data source selection. Therefore all
+functionality related to selecting data from a particular source now
+does nothing.
 
-It is now time for the production release, and I have received no
-feedback (either asking for the retention of SOAP::Lite or otherwise).
-So with this release, support for SOAP as a transport is revoked, as is
-the C<'transport'> attribute.
+* The new service does not support retrieval of data from more than one
+source. Therefore any functionality that used to do this now returns
+data from a single source.
+
+* The new service does not return the C<{Data_ID}> information in any
+way whatsoever. So, at least in compatibility mode, this is set to the
+value of C<{Data_Source}>.
+
+* The new service does not report extent errors. Instead it appears to
+return an elevation of C<0>.
+
+* The structure returned by the new service is similar to that returned
+by the old service, but the top-level hash key name is different. This
+module will attempt to hide this difference in compatibility mode.
+
+Because this module attempts to hide the differences from the data
+returned by the old service, a new attribute, C<compatible>, is added to
+manage this. If this attribute is true (the default) returned data will
+be as close to the old server's data as possible.
+
+With release 0.100, the following functionality is
+deprecated:
+
+* Attributes C<default_ns>, C<proxy>, C<source>, and C<use_all_limit>.
+
+* Methods C<getElevation()> and C<getAllElevations()>. The
+C<elevation()> method will remain.
+
+On or about February 1 2015, all deprecated functionality will warn the
+first time it is used. Six months after that, it will warn every time it
+is used, and six months after that it will become fatal. After a further
+six months, all code related to the deprecated functionality will be
+removed.
+
+At the point where the deprecated functionality warns on every use, the
+C<compatible> attribute will also become deprecated. Six months after
+that, its default will become false, and it will warn when set true. Six
+months after that it will become a fatal error to use it.
 
 =head1 DESCRIPTION
 
 This module executes elevation queries against the United States
-Geological Survey's web server. You provide the latitude and longitude
+Geological Survey's web NAD server. You provide the latitude and longitude
 in degrees, with south latitude and west longitude being negative. The
 return is typically a hash containing the data you want. Query errors
 are exceptions by default, though the object can be configured to signal
@@ -37,7 +74,7 @@ an error by an undef response, with the error retrievable from the
 'error' attribute.
 
 For documentation on the underlying web service, see
-L<http://gisdata.usgs.gov/XMLWebServices/TNM_Elevation_Service.php>.
+L<http://ned.usgs.gov>.
 
 For all methods, the input latitude and longitude are documented at the
 above web site as being WGS84, which for practical purposes I understand
@@ -58,37 +95,6 @@ paper states that the difference between ellipsoid and geoid heights
 ranges between -75 and +100 meters globally, and between -53 and -8
 meters in "the conterminous United States."
 
-B<Caveat:> This module relies on the documented behavior of the
-above-referred-to USGS web service, as well as certain undocumented but
-observed behaviors and the proper functioning of the USGS' hardware and
-software and the network connecting you to them. Changes or failures in
-any of these will probably cause this module not to work.
-
-I have not (I think) gone out of my way to use undocumented behavior,
-but there are a couple cases where I felt forced into it.
-
-First, the documentation says that if a point is not in a requested
-source data set, the returned elevation will be -1.79769313486231E+308.
-In practice, the getAllElevations web service returns 'BAD_EXTENT' in
-this case, and the getElevation web service returns error 'ERROR: No
-Elevation value was returned from servers.' This affects the behavior of
-the is_valid() method, but more importantly it convinced me to try to
-convert the corresponding getElevation error back into a successful call
-of the getElevation() method, returning 'BAD_EXTENT' as the elevation.
-
-Second, experimentation shows that, although the source IDs are
-generally documented as upper-case, in fact the getElevation web service
-queries are not sensitive to the case of the provided source ID. Because
-of this, this package normalizes source IDs (by converting them to upper
-case) before using them in a comparison. This affects the behavior of
-the elevation() method when the 'source' attribute is an array or hash
-reference and the source is being used to select results from a
-getAllElevations query. It also affects the construction of the
-'BAD_EXTENT' packet in response to a getElevation web service failure,
-since the source name is obtained by making a call to getAllElevations()
-(or the cached results of such a call) and finding the name
-corresponding to the given source ID.
-
 =head2 Methods
 
 The following public methods are provided:
@@ -104,17 +110,18 @@ use warnings;
 
 use Carp;
 use HTTP::Request::Common;
+use JSON;
 use LWP::UserAgent;
 use Scalar::Util 1.10 qw{ blessed looks_like_number };
 use XML::Parser;
 
-our $VERSION = '0.011';
+our $VERSION = '0.100';
 
 use constant BEST_DATA_SET => -1;
+use constant USGS_URL => 'http://ned.usgs.gov/epqs/pqs.php';
 
 my $using_time_hires;
 {
-    our $THROTTLE;
     my $mark;
     if ( eval {
 	    require Time::HiRes;
@@ -131,9 +138,6 @@ my $using_time_hires;
     $mark = _time();
     sub _pause {
 	my ( $self ) = @_;
-	defined $THROTTLE
-	    and croak '$THROTTLE revoked - use ', __PACKAGE__,
-		'->set( throttle => value ) instead';
 	my $now = _time();
 	while ( $now < $mark ) {
 	    _sleep( $mark - $now );
@@ -159,6 +163,7 @@ sub new {
     shift;
     my $self = {
 	carp	=> 0,
+	compatible	=> 1,
 	croak	=> 1,
 	default_ns	=> 'http://gisdata.usgs.gov/XMLWebServices2/',
 	error	=> undef,
@@ -181,6 +186,7 @@ sub new {
 my %mutator = (
     croak	=> \&_set_literal,
     carp	=> \&_set_literal,
+    compatible	=> \&_set_literal,
     default_ns	=> \&_set_literal,
     error	=> \&_set_literal,
     places	=> \&_set_integer_or_undef,
@@ -232,126 +238,25 @@ You can also pass a Geo::Point, GPS::Point, or Net::GPSD::Point object
 in lieu of the $lat and $lon arguments. If you do this, $valid becomes
 the second argument, rather than the third.
 
-If the 'source' is undef or -1, getElevation() is called to get the
-'best' data set representing the given coordinates. The result is an
-array (or array reference) whose sole element is the hash returned by
-GetElevation().
-
-If the 'source' is any other scalar, getElevation() is called to get the
-named data set. The result is an array (or array reference) whose sole
-element is the hash returned by GetElevation().
-
-If the 'source' is a reference to an empty array or an empty hash,
-getAllElevations() is called, and its output (or a reference to it) is
-returned.
-
-If the 'source' is a reference to a non-empty array with at least as
-many entries as the value of the 'use_all_limit' attribute, B<and> none
-of the entries begins with a '*' (what the USGS calls 'best available
-subset' syntax) it is made into a hash by using the contents of the
-array as keys and 1 as the value for all keys. Then getAllElevations()
-is called, and the array (or a reference to it) of all source data sets
-whose Source_ID values appear in the hash are returned. An error will be
-declared if there are any source IDs specified in the array which are
-not returned by getAllElevations().
-
-If the 'source' is a reference to a non-empty array and none of the
-other conditions of the previous paragraph apply, getElevation() is
-called for each element of the array, and the array of all results (or a
-reference to it) is returned.
-
-B<Please note> that the use of wildcard source IDs (either the magic
-'-1' or anything beginning with '*') in an array (or hash, see below) is
-not supported. Users will find that the current behavior is to error
-out with an invalid source name if the query is directed to
-getAllElevations. If the query gets handled by iterating with
-getElevation(), it succeeds or errors out under the same conditions that
-the getElevation() method would. But I make no commitment to retain this
-functionality. Instead, I hope that use of the module will clarify what
-its behavior should be.
-
-If the 'source' is a reference to a non-empty hash, it is handled pretty
-much as though the 'source' were a reference to an array containing the
-sorted keys of the hash.
-
-If the 'source' is a reference to a regular expression,
-getAllElevations() is called, and items whose Data_ID does not match the
-regular expression are eliminated from its output. The resultant array
-(or a reference to it) is returned.
-
-If the 'source' is a reference to code, getAllElevations() is called.
-For each item in the returned array, the code is called, with the
-Geo::WebService::Elevation::USGS object as the first argument, and the
-array item (which, remember, is a hash reference like that returned by
-getElevation()) as the second argument. If the code returns true the
-item is included in the output; if the code returns false the item is
-excluded. The resultant array (or a reference to it) is returned.
-
-For example,
-
- $ele->set(source => sub {$_[1]{Data_ID} =~ m/CONUS/i});
-
-will retain all items whose Data_ID contains the string 'CONUS', and
-therefore has the same result as
-
- $ele->set(source => qr{CONUS}i);
-
 If the optional C<$valid> argument to elevation() is specified, data
 with invalid elevations are eliminated before the array is returned.
-Note that this may result in an empty array.
+Note that this could theoretically result in an empty array, but since
+the NAD source does not normally produce invalid data, you will probably
+not see this.
 
 =cut
 
-{
-
-    my %filter = (
-	CODE => sub {
-	    sub {$_[1]->($_[0], $_[2])}
-	},
-	HASH => sub {%{$_[0]} ?
-	    sub {delete $_[1]{_normalize_id($_[2]{Data_ID})}} :
-	    sub {1}
-	},
-	Regexp => sub {
-	    sub {$_[2]{Data_ID} =~ $_[1]}
-	},
-    );
-
-    sub elevation {
-	my ($self, $lat, $lon, $valid) = _latlon( @_ );
-	my $ref = ref (my $source = $self->_get_source());
-	my $rslt;
-	if ($ref eq 'ARRAY') {
-	    $rslt = [];
-	    foreach (@$source) {
-		push @$rslt, $self->getElevation($lat, $lon, $_);
-		$self->get('error') and return;
-	    }
-	} elsif ($ref) {
-	    $filter{$ref}
-		or croak "Source $ref ref not understood";
-	    my $check = $filter{$ref}->($source);
-	    ref (my $raw = $self->getAllElevations($lat, $lon)) eq 'ARRAY'
-		or return;
-	    $rslt = [grep {$check->($self, $source, $_)} @$raw];
-  	    if ($ref eq 'HASH') {
-		foreach (sort keys %$source) {
-		    $self->_error( "Source Data_ID $_ not found" );
-		    $self->{croak} and croak $self->{error};
-		    return;
-		}
-	    }
-	} else {
-	    ref (my $raw = $self->getElevation($lat, $lon, $source)) eq
-	    'HASH'
-		or return;
-	    $rslt = [$raw];
-	}
-	if ($valid) {
-	    $rslt = [grep {is_valid($_)} @$rslt];
-	}
-	return wantarray ? @$rslt : $rslt;
+sub elevation {
+    my ($self, $lat, $lon, $valid) = _latlon( @_ );
+    my $rslt;
+    ref (my $raw = $self->getElevation($lat, $lon )) eq
+    'HASH'
+	or return;
+    $rslt = [$raw];
+    if ($valid) {
+	$rslt = [grep {is_valid($_)} @$rslt];
     }
+    return wantarray ? @$rslt : $rslt;
 }
 
 =head3 $value = $eq->get($attribute);
@@ -371,28 +276,8 @@ sub get {
 
 =head3 $rslt = $eq->getAllElevations($lat, $lon, $valid);
 
-This method executes the getAllElevations query, which returns the
-elevation of the given point as recorded in all available data sets. The
-results are returned as a reference to an array containing hashes
-representing the individual data sets. Each data set hash is structured
-like the one returned by getElevation(). If a failure occurs, the method
-will croak if the 'croak' attribute is true, or return undef otherwise.
-The arguments are WGS84 latitude and longitude, in degrees, with south
-latitude and west longitude being negative. The elevations returned are
-NAVD88 elevations.
-
-You can also pass a Geo::Point, GPS::Point, or Net::GPSD::Point object
-in lieu of the $lat and $lon arguments.
-
-If the elevation is not available from a given source, that source will
-still appear in the output, but the Elevation will either be a
-non-numeric value (e.g. 'BAD_EXTENT', though this is nowhere documented
-that I can find), or a very large negative number (documented as
--1.79769313486231E+308).
-
-If the optional C<$valid> argument to getAllElevations() is specified,
-data with invalid elevations are eliminated before the array is
-returned. Note that this may result in an empty array.
+Starting with version 0.100, this method is now simply a
+wrapper for the C<elevation()> method.
 
 =cut
 
@@ -741,7 +626,9 @@ sub _digest {
 		$round->($rslt->{double}) :
 		$rslt->{double};
 	foreach my $key (
-	    qw{USGS_Elevation_Web_Service_Query Elevation_Query}) {
+#x#	    qw{USGS_Elevation_Web_Service_Query Elevation_Query}
+	    qw{ USGS_Elevation_Point_Query_Service Elevation_Query }
+	) {
 	    (ref $rslt eq 'HASH' && exists $rslt->{$key}) or do {
 		$error = "Elevation result is missing tag <$key>";
 		last;
@@ -997,18 +884,6 @@ sub _normalize_id {return uc $_[0]}
 #	method is now a trampoline to the HTTP Post logic.
 
 sub _request {
-    goto &_request_HTTP_Post;
-}
-
-#	$rslt = $self->_request_HTTP_Post( $service, %args );
-#
-#	This private method requests data from the USGS' web service
-#	using an HTTP Post request. It has the same signature as
-#	_request().
-#
-#	THIS METHOD SHOULD ONLY BE CALLED BY _request().
-
-sub _request_HTTP_Post {
     my ( $self, $service, %arg ) = @_;
 
     my $rslt;
@@ -1024,75 +899,59 @@ sub _request_HTTP_Post {
 	my $ua = $self->{_transport_object} ||=
 	    LWP::UserAgent->new( timeout => $self->{timeout} );
 
-	my $rqst = HTTP::Request::Common::POST(
-	    "$self->{proxy}/$service", \%arg );
+
+#x#	'getElevation' eq $service
+#x#	    or carp "$service not supported; getting single elevation";
+
+	my $units = ( $arg{Elevation_Units} =~ m/ \A meters \z /smxi ) ? 'Meters' :
+	    'Feet';
+
+	my $uri = URI->new( USGS_URL );
+	$uri->query_form( {
+		x	=> $arg{X_Value},
+		y	=> $arg{Y_Value},
+		units	=> $units,
+		output	=> 'json',
+	    } );
+	my $rqst = HTTP::Request::Common::GET( $uri );
 
 	$self->{trace} and print STDERR $rqst->as_string();
 	$rslt = $ua->request( $rqst );
 	$self->{trace} and print STDERR $rslt->as_string();
     }
 
+    # The _instance check is purely for the benefit of {_hack_response}
+    # support.
     if ( _instance( $rslt, 'HTTP::Response' ) ) {
-
 	$rslt->is_success()
-	    or do {
-	    my $error = $rslt->status_line();
-	    chomp $error;
-	    die "$error\n";
+	    or croak $rslt->status_line();
+
+	my $json = JSON->new()->utf8();
+	$rslt = $json->decode( $rslt->content() );
+
+	# TODO all the following code is for compatibility.
+	defined $arg{Elevation_Only}
+	    and $arg{Elevation_Only} =~ m/ \A true \z /smxi
+	    and return +{
+	    double	=> $rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}{Elevation},
 	};
-
-	$rslt = $rslt->content();
-
-	my $psr = $self->{_xml_parser} ||=
-	    XML::Parser->new( Style => 'Tree' );
-	$rslt = $psr->parse( $rslt );
-	$rslt = $self->_transform_xml( $rslt );
-
+	# TODO all the preceding code is for compatibility.
     }
 
+    # TODO all the following code is for compatibility. The 'HASH' check
+    # is for the benefit of {_hack_response}.
+    if ( 'HASH' eq ref $rslt and
+	'HASH' eq ref $rslt->{USGS_Elevation_Point_Query_Service} and
+	'HASH' eq ref $rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}
+    ) {
+	$rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}{Units}
+	    = uc $rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}{Units};
+	$rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}{Data_ID}
+	    = $rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}{Data_Source};
+    }
+    # TODO all the preceding code is for compatibility.
     return $rslt;
 }
-
-#	my $resp = $self->_transform_xml( $xml );
-#
-#	This method takes as input the XML::Parser parse tree of the XML
-#	returned in response to an HTTP request to the USGS' elevation
-#	service, and transforms it, returning a reference to a hash that
-#	is supposed to be compatible with the hash returned by the
-#	corresponding SOAP::Lite request.
-#
-#	If a tree node has children other than literals, it calls itself
-#	recursively to parse them, and returns a hash keyed by the names
-#	of the children, and whose contents are the return generated by
-#	the recursive call. If a node has no children other than
-#	literals, it returns the concatenation of all non-white-space
-#	literals in the node.
-
-sub _transform_xml {
-    my ( $self, $parse ) = @_;
-    my @expand = @{ $parse };
-    my %rslt;
-    'HASH' eq ref $expand[0]
-	and shift @expand;
-    my @literal;
-    while ( @expand ) {
-	my ( $name, $content ) = splice @expand, 0, 2;
-	if ( ref $content ) {
-	    if ( exists $rslt{$name} ) {
-		ref $rslt{$name}
-		    or $rslt{$name} = [ $rslt{$name} ];
-		push @{ $rslt{$name} }, $self->_transform_xml(
-		    $content );
-	    } else {
-		$rslt{$name} = $self->_transform_xml( $content );
-	    }
-	} elsif ( $content !~ m/ \A \s* \z /smx ) {
-	    push @literal, $content;
-	}
-    }
-    return %rslt ? \%rslt : join ' ', @literal;
-}
-
 
 1;
 
@@ -1115,6 +974,14 @@ version 0.005_01.
 
 The default is 0 (i.e. false).
 
+=head3 compatible (boolean)
+
+This boolean attribute determines whether this object attempts to make
+returned data consistent with the old GIS server.
+
+The default is C<1> (i.e. true) for the moment, but see the
+L<NOTICE|/NOTICE> above for plans to change this.
+
 =head3 croak (boolean)
 
 This attribute determines whether the data acquisition methods croak on
@@ -1126,6 +993,9 @@ acquisition method will not croak until all retries are exhausted.
 The default is 1 (i.e. true).
 
 =head3 default_ns (string)
+
+This attribute is deprecated. See the L<NOTICE|/NOtICE> above for the
+deprecation schedule.
 
 This attribute records the XML namespace used by the SOAP query. This
 must agree with the targetNamespace value given in the USGS' WSDL found
@@ -1156,6 +1026,9 @@ sprintf "%.${places}f".
 The default is undef.
 
 =head3 proxy (string)
+
+This attribute is deprecated. See the L<NOTICE|/NOtICE> above for the
+deprecation schedule.
 
 This attribute specifies the actual url to which the SOAP query is
 posted. It must agree with the soap:address location value given for
@@ -1210,6 +1083,9 @@ The default is the null subroutine, i.e. C<sub {}>.
 
 =head3 source
 
+This attribute is deprecated. See the L<NOTICE|/NOtICE> above for the
+deprecation schedule.
+
 This attribute specifies the ID of the source layer to be queried by
 the elevation() method. Valid layer IDs are documented at
 L<http://gisdata.usgs.gov/XMLWebServices/TNM_Elevation_Service_Methods.php>.
@@ -1243,23 +1119,27 @@ The default is 30.
 
 =head3 trace (boolean)
 
-If true, this attribute requests a SOAP::Lite trace of any queries made.
-This should only be used for troubleshooting, and the author makes no
-representation about and has no control over what output you get if you
-set this true.
+If true, this attribute requests that network requests and responses be
+dumped to standard error.  This should only be used for troubleshooting,
+and the author makes no representation about and has no control over
+what output you get if you set this true.
 
 The default is undef (i.e. false).
 
 =head3 units (string)
 
 This attribute specifies the desired units for the resultant elevations.
-The USGS documents 'FEET' and 'METERS' as valid values. Experimentation
-shows that undocumented values (e.g. 'CUBITS') return results in feet,
-which is documented as the default.
+Valid values are C<'Feet'> and C<'Meters'>. In practice these are not
+case-sensitive, and any value other than case-insensitive C<'Meters'>
+will be taken as C<'Feet'>.
 
-The default is 'FEET'.
+The default is 'FEET', but this will become C<'Feet'> when the
+compatibility code goes away.
 
 =head3 use_all_limit (integer)
+
+This attribute is deprecated. See the L<NOTICE|/NOtICE> above for the
+deprecation schedule.
 
 This attribute is used to optimize the behavior of the elevation()
 method when the 'source' attribute is an array or hash reference. If the
@@ -1275,39 +1155,6 @@ getElevation() to be used whenever the 'source' array or hash has any
 entries at all, no matter how many it has.
 
 The default is 5, which was chosen based on timings of the two methods.
-
-=head2 Globals
-
-=head3 $Geo::WebService::Elevation:USGS::THROTTLE
-
-B<This interface is deprecated;> use the L</throttle> static method
-instead. It will be revoked in release C<0.006>, and at that time
-setting C<$THROTTLE> will become a fatal error. The short deprecation
-cycle is because this interface has never been released in a production
-release, and because you were warned when it was introduced. Until the
-next production release, the next query after setting C<$THROTTLE> will
-cause a warning message to be issued, and its value to be passed to
-L</throttle>.
-
-If set to a positive number, this symbol limits the rate at which
-queries can be issued. The value represents the minimum interval between
-queries (in seconds), which is enforced by having the query methods
-C<sleep()> as needed. This minimum is enforced among objects, not just
-within a single object.
-
-If L<Time::HiRes|Time::HiRes> can be loaded, its C<time()> and
-C<sleep()> will be used, and fractional minimum intervals can be
-specified. If it can not be loaded, the core C<time()> and C<sleep()>
-will be used. With the core functions, the resolution is a second, and
-a C<$THROTTLE> value between 0 and 1 will be taken to be 1.
-
-The behavior of this functionality when C<$THROTTLE> is set to a
-non-numeric value is undefined. In practice, you will probably get an
-error of some sort when you issue the query, but the author makes no
-commitments. Same for quasi-numbers such as C<Inf> and C<NaN>.
-
-The default is C<undef>, which means that this functionality is
-disabled.
 
 =head1 ACKNOWLEDGMENTS
 

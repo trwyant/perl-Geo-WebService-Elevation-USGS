@@ -26,6 +26,7 @@ Dataset
 Dru
 GEOID
 Geoid
+GIS
 GPS
 IDs
 InvalidCastException
