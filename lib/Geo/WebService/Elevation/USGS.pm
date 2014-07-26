@@ -229,34 +229,55 @@ sub attributes {
 =head3 $rslt = $usgs->elevation($lat, $lon, $valid);
 
 This method queries the data base for the elevation at the given
-latitude and longitude, returning the results in an array reference. If
-called in list context the array itself is returned. The returned array
-contains hashes identical to that returned by getElevation().
+latitude and longitude, returning the results as a hash reference. This
+hash will contain the following keys:
+
+{Data_Source} => A text description of the data source;
+
+{Elevation} => The elevation in the given units;
+
+{Units} => The units of the elevation (C<'Feet'> or C<'Meters'>);
+
+{x} => The C<$lon> argument;
+
+{y} => The C<$lat> argument.
+
+For compatibility with versions of this module before C<0.100>, this
+method behaves slightly differently if the L<compatible|/compatible>
+attribute is true:
+
+* The C<{Data_ID}> key of the return will be set to the value of the
+{Data_Source} key;
+
+* The C<{Units}> key will be converted to upper case;
+
+* If called in scalar context the return will be a reference to an array
+whose single element is the results hash.
 
 You can also pass a C<Geo::Point>, C<GPS::Point>, or C<Net::GPSD::Point>
 object in lieu of the C<$lat> and C<$lon> arguments. If you do this,
 C<$valid> becomes the second argument, rather than the third.
 
-If the optional C<$valid> argument to elevation() is specified, data
-with invalid elevations are eliminated before the array is returned.
-Note that this could theoretically result in an empty array, but since
-the NAD source does not normally produce invalid data, you will probably
-not see this.
+If the optional C<$valid> argument is specified and the returned data
+are invalid, nothing is returned. This means an empty array if
+L<compatible|/compatible> is true. The NAD source does not seem to
+produce data recognizable as invalid, so you will probably not see this.
+
+The NAD server appears to return an elevation of C<0> if the elevation
+is unavailable.
 
 =cut
 
 sub elevation {
-    my ($self, $lat, $lon, $valid) = _latlon( @_ );
-    my $rslt;
-    ref (my $raw = $self->getElevation($lat, $lon )) eq
-    'HASH'
+    my ( $self, $lat, $lon, $valid ) = _latlon( @_ );
+
+    my $rslt = $self->_elevation( $lat, $lon, $valid )
 	or return;
-    $rslt = [$raw];
-    if ($valid) {
-	$rslt = [grep {is_valid($_)} @$rslt];
-    }
+
     # TODO compatibility
-    return wantarray ? @$rslt : $rslt;
+    $self->get( 'compatible' )
+	or return $rslt;
+    return wantarray ? $rslt : [ $rslt ];
 }
 
 =head3 $value = $eq->get($attribute);
@@ -276,65 +297,25 @@ sub get {
 
 =head3 $rslt = $eq->getAllElevations($lat, $lon, $valid);
 
-Starting with version 0.100, this method is now simply a
-wrapper for the C<elevation()> method.
+Starting with version 0.100, this method is essentially a wrapper for
+the C<elevation()> method. For compatibility with the prior version of
+this module it returns an array reference in scalar context.
 
 =cut
 
 sub getAllElevations {
-    my ($self, $lat, $lon, $valid) = _latlon( @_ );
-    my $retry_limit = $self->get( 'retry' );
-    my $retry = 0;
+    my ( $self, $lat, $lon, $valid ) = _latlon( @_ );
 
-    while ( $retry++ <= $retry_limit ) {
+    my $rslt = $self->_elevation( $lat, $lon, $valid )
+	or return;
 
-	$self->{error} = undef;
-
-	$self->_pause();
-
-	my @rslt;
-	eval {
-	    @rslt = $self->_request(
-		x	=> $lon,
-		y	=> $lat,
-		units	=> $self->{units},
-	    );
-	    1;
-	} or do {
-	    $self->_error( $@ );
-	    next;
-	};
-
-	if ($valid) {
-	    @rslt = grep {is_valid($_)} @rslt;
-	}
-	return \@rslt;
-
-    } continue {
-
-	$retry <= $retry_limit
-	    and $self->get( 'retry_hook' )->( $self, $retry,
-	    getAllElevations => $lat, $lon );
-
-    }
-
-    $self->{croak} and croak $self->{error};
-    return;
+    return wantarray ? $rslt : [ $rslt ];
 }
 
 =head3 $rslt = $eq->getElevation($lat, $lon, $source, $elevation_only);
 
-This method requests elevation for the given WGS84 latitude and
-longitude (in degrees, with south latitude and west longitude being
-negative). The returned elevation is NAVD88. If a failure occurs, the
-method will croak if the 'croak' attribute is true, or return undef
-otherwise. Either way, the error if any will be available in the 'error'
-attribute.
-
-You can also pass a Geo::Point, GPS::Point, or Net::GPSD::Point object
-in lieu of the $lat and $lon arguments. If you do this, C<$source>
-becomes the second argument, rather than the third, and
-C<$elevation_only> becomes the third argument rather than the fourth.
+Starting with version 0.100, this method is essentially a wrapper for
+the C<elevation()> method.
 
 The C<$source> argument is both optional and ignored, but must be
 present for backwards compatibility if the C<$elevation_only> argument
@@ -344,70 +325,15 @@ The C<$elevation_only> argument is optional. If provided and true (in the
 Perl sense) it causes the return on success to be the numeric value of
 the elevation, rather than the hash reference described below.
 
-Assuming success and an unspecified or false $elevation_only, $rslt
-will be a reference to a hash containing the data. The following keys
-are returned in compatibility mode:
-
- Data_Source: name or description of data source
- Data_ID: string identifier of data source
- Elevation: the elevation of the point
- Units: the units of the Elevation
-
-The contents of $rslt will then be something like:
-
- {
-     Data_Source => 'source name'
-     Data_ID => 'source ID',
-     Elevation => elevation from given source,
-     Units => 'units from source',
- }
-
-The NAD server appears to return an elevation of C<0> if the elevation
-is unavailable.
-
 =cut
 
 sub getElevation {
-    my ($self, $lat, $lon, $source, $only) = _latlon( @_ );
-    defined $source or $source = BEST_DATA_SET;
-    my $retry_limit = $self->get( 'retry' );
-    my $retry = 0;
+    my ($self, $lat, $lon, undef, $only) = _latlon( @_ );
 
-    while ( $retry++ <= $retry_limit ) {
+    my $rslt = $self->_elevation( $lat, $lon )
+	or return;
 
-	$self->{error} = undef;
-
-	$self->_pause();
-
-	my $rslt;
-	eval {
-	    $rslt = $self->_request(
-		x	=> $lon,
-		y	=> $lat,
-		units	=> $self->{units},
-	    );
-	    1;
-	} or do {
-	    $self->_error( $@ );
-	    next;
-	};
-
-	$rslt
-	    or next;
-
-	return $only ? $rslt->{Elevation} : $rslt;
-
-    } continue {
-
-	$retry <= $retry_limit
-	    and $self->get( 'retry_hook' )->( $self, $retry,
-	    getElevation => $lat, $lon, $source, $only );
-
-    }
-
-    $self->{croak} and croak $self->{error};
-    return;
-
+    return $only ? $rslt->{Elevation} : $rslt;
 }
 
 =head3 $boolean = $eq->is_valid($elevation);
@@ -533,6 +459,59 @@ sub _set_unsigned_integer {
 #	Private methods
 #
 #	The author reserves the right to change these without notice.
+
+#	$rslt = $ele->_elevation( $lat, $lon, $only );
+#
+#	This is the prospective elevation(), once compatibility goes
+#	away.
+
+sub _elevation {
+    my ( $self, $lat, $lon, $valid ) = _latlon( @_ );
+    my $retry_limit = $self->get( 'retry' );
+    my $retry = 0;
+
+    while ( $retry++ <= $retry_limit ) {
+
+	$self->{error} = undef;
+
+	$self->_pause();
+
+	my $rslt;
+	eval {
+	    $rslt = $self->_request(
+		x	=> $lon,
+		y	=> $lat,
+		units	=> $self->{units},
+	    );
+	    1;
+	} or do {
+	    $self->_error( $@ );
+	    next;
+	};
+
+	$rslt
+	    or next;
+
+	not $valid
+	    or is_valid( $rslt )
+	    or next;
+
+	return $rslt;
+
+    } continue {
+
+	if ( $retry <= $retry_limit ) {
+	    ( my $sub = ( caller( 0 ) )[3] ) =~ s/ .* :: //smx;
+	    $self->get( 'retry_hook' )->( $self, $retry, $sub, $lat,
+		$lon );
+	}
+
+    }
+
+    $self->{croak} and croak $self->{error};
+    return;
+
+}
 
 #	$ele->_error($text);
 #
@@ -691,10 +670,10 @@ sub _request {
 	and defined( $places = $self->get( 'places' ) )
 	and $rslt->{Elevation} = sprintf '%.*f', $places, $rslt->{Elevation};
 
-    # TODO all the following code is for compatibility.
-    $rslt->{Units} = uc $rslt->{Units};
-    $rslt->{Data_ID} = $rslt->{Data_Source};
-    # TODO all the preceding code is for compatibility.
+    if ( $self->get( 'compatible' ) ) {
+	$rslt->{Units} = uc $rslt->{Units};
+	$rslt->{Data_ID} = $rslt->{Data_Source};
+    }
 
     return $rslt;
 }
