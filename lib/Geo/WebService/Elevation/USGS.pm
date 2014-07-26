@@ -198,7 +198,7 @@ my %mutator = (
     timeout	=> \&_set_integer_or_undef,
     trace	=> \&_set_literal,
     units	=> \&_set_literal,
-    use_all_limit => \&_set_use_all_limit,
+    use_all_limit => \&_set_integer,
 );
 
 my %access_type = (
@@ -551,11 +551,6 @@ sub _set_unsigned_integer {
     return ($self->{$name} = $val + 0);
 }
 
-sub _set_use_all_limit {
-    _set_integer(@_);
-    return;
-}
-
 ########################################################################
 #
 #	Private methods
@@ -712,13 +707,6 @@ sub _instance {
     }
 
 }
-
-#	$id = _normalize_id($id)
-#
-#	This subroutine normalizes a Source_ID by uppercasing it. It
-#	exists to centralize this operation.
-
-sub _normalize_id {return uc $_[0]}
 
 #	$rslt = $self->_request( %args );
 #
