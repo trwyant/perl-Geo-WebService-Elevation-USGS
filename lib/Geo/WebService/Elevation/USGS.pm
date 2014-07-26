@@ -730,44 +730,38 @@ sub _normalize_id {return uc $_[0]}
 sub _request {
     my ( $self, %arg ) = @_;
 
-    my $rslt;
+    # The allow_nonref() is for the benefit of {_hack_result}.
+    my $json = $self->{_json} ||= JSON->new()->utf8()->allow_nonref();
 
-    if ( exists $self->{_hack_result} ) {
+    my $ua = $self->{_transport_object} ||=
+	LWP::UserAgent->new( timeout => $self->{timeout} );
 
-	$rslt = delete $self->{_hack_result};
-	'CODE' eq ref $rslt
-	    and $rslt = $rslt->( $self, %arg );
+    defined $arg{units}
+	or $arg{units} = 'Feet';
+    $arg{units} = $arg{units} =~ m/ \A meters \z /smxi
+	? 'Meters'
+	: 'Feet';
+    $arg{output}	= 'json';
 
-    } else {
+    my $uri = URI->new( USGS_URL );
+    $uri->query_form( \%arg );
+    my $rqst = HTTP::Request::Common::GET( $uri );
 
-	my $ua = $self->{_transport_object} ||=
-	    LWP::UserAgent->new( timeout => $self->{timeout} );
+    $self->{trace}
+	and print STDERR $rqst->as_string();
 
-	defined $arg{units}
-	    or $arg{units} = 'Feet';
-	$arg{units} = $arg{units} =~ m/ \A meters \z /smxi
-	    ? 'Meters'
-	    : 'Feet';
-	$arg{output}	= 'json';
+    my $rslt = exists $self->{_hack_result} ? do {
+	my $data = delete $self->{_hack_result};
+	'CODE' eq ref $data ? $data->( $self, %arg ) : $data;
+    } : $ua->request( $rqst );
 
-	my $uri = URI->new( USGS_URL );
-	$uri->query_form( \%arg );
-	my $rqst = HTTP::Request::Common::GET( $uri );
+    $self->{trace}
+	and print STDERR $rslt->as_string();
 
-	$self->{trace} and print STDERR $rqst->as_string();
-	$rslt = $ua->request( $rqst );
-	$self->{trace} and print STDERR $rslt->as_string();
-    }
+    $rslt->is_success()
+	or croak $rslt->status_line();
 
-    # The _instance check is purely for the benefit of {_hack_response}
-    # support.
-    if ( _instance( $rslt, 'HTTP::Response' ) ) {
-	$rslt->is_success()
-	    or croak $rslt->status_line();
-
-	my $json = JSON->new()->utf8();
-	$rslt = $json->decode( $rslt->content() );
-    }
+    $rslt = $json->decode( $rslt->content() );
 
     # TODO all the following code is for compatibility. The 'HASH' check
     # is for the benefit of {_hack_response}.

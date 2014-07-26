@@ -29,17 +29,25 @@ sub requires {
     return {
 	'Carp'			=> 0,
 	'HTTP::Request::Common'	=> 0,
+	'JSON'			=> 0,
 	'LWP::UserAgent'	=> 0,
 	'Scalar::Util'		=> 1.10,
 	'strict'		=> 0,
 	'warnings'		=> 0,
-	'XML::Parser'		=> 0,
 	@extra,
     };
 }
 
 sub requires_perl {
     return 5.008;
+}
+
+sub build_requires {
+    return {
+	'Test::More'		=> 0.88,
+	'HTTP::Response'	=> 0,
+	'HTTP::Status'		=> 0,
+    };
 }
 
 
@@ -106,6 +114,12 @@ may be added.
  print 'This package requires Perl ', $meta->requires_perl(), "\n";
 
 This method returns the version of Perl required by the package.
+
+=head2 build_requires
+
+This method computes and returns a reference to a hash describing the
+modules required to build the C<Geo::WebService::Elevation::USGS>
+package.
 
 =head1 ATTRIBUTES
 

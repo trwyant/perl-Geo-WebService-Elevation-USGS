@@ -25,9 +25,7 @@ my %args = (
 $mmv >= 6.31 and $args{LICENSE} = 'perl';
 
 $mmv >= 6.4501 and $args{META_MERGE} = {
-    build_requires => {
-	'Test::More' => 0.40,
-    },
+    build_requires => $meta->build_requires(),
     dynamic_config => 1,
     resources => {
 	bugtracker => 'https://rt.cpan.org/Public/Dist/Display.html?Name=Geo-WebService-Elevation-USGS',

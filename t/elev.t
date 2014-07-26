@@ -3,6 +3,9 @@ package main;
 use strict;
 use warnings;
 
+use HTTP::Response;
+use HTTP::Status;
+use JSON;
 use Test::More;
 
 use constant BAD_EXTENT_SOURCE => 'NED.AK_NED';
@@ -189,13 +192,15 @@ SKIP: {
     # think why anyone would want a public interface for {_hack_result}
     # anyway. If you do, contact me, and if I can't talk you out of it
     # we will come up with something.
-    $bogus->{_hack_result} = {
-	USGS_Elevation_Point_Query_Service	=> {
-	    Elevation_Query	=> {
-		Elevation	=> 58.6035683399111,
+    $bogus->{_hack_result} = _make_resp(
+	{
+	    USGS_Elevation_Point_Query_Service	=> {
+		Elevation_Query	=> {
+		    Elevation	=> 58.6035683399111,
+		},
 	    },
-	},
-    };
+	}
+    );
     $rslt = eval {$bogus->getElevation( @ele_loc , undef, 1)};
     ok(!$@, 'getElevation (only) succeeded') or diag($@);
     is($rslt, '58.6035683399111',
@@ -233,13 +238,13 @@ SKIP: {
     }
 
     $bogus->set(source => []);
-    $bogus->{_hack_result} = undef;
+    $bogus->{_hack_result} = _make_resp( undef );
     $rslt = eval {$bogus->elevation( @ele_loc )};
     like($@, NO_DATA_FOUND_RE,
 	'No data error when going through getAllElevations');
 
     $bogus->set(croak => 0, carp => 1);
-    $bogus->{_hack_result} = undef;
+    $bogus->{_hack_result} = _make_resp( undef );
     $rslt = eval {$bogus->elevation( @ele_loc )};
     ok(!$@, 'Should not throw an error on bad result if croak is false')
 	or diag($@);
@@ -251,7 +256,7 @@ SKIP: {
 
     $msg = undef;
     $bogus->set(carp => 0);
-    $bogus->{_hack_result} = undef;
+    $bogus->{_hack_result} = _make_resp( undef );
     $rslt = eval {$bogus->elevation( @ele_loc )};
     ok(!$@, 'Should not throw an error on bad result if croak is false')
 	or diag($@);
@@ -306,13 +311,13 @@ SKIP: {
     );
 
     $bogus->set(source => undef, croak => 1);
-    $bogus->{_hack_result} = undef;
+    $bogus->{_hack_result} = _make_resp( undef );
     $rslt = eval {$bogus->elevation( @ele_loc )};
     like($@, NO_DATA_FOUND_RE,
 	'No data error when going through getElevations');
 
     $bogus->set(croak => 0);
-    $bogus->{_hack_result} = undef;
+    $bogus->{_hack_result} = _make_resp( undef );
     $rslt = eval {$bogus->elevation( @ele_loc )};
     ok(!$@, 'Should not throw an error on bad result if croak is false')
 	or diag($@);
@@ -320,41 +325,49 @@ SKIP: {
     like($bogus->get('error'), NO_DATA_FOUND_RE,
 	'No data error when going through getElevation');
 
-    $bogus->{_hack_result} = {};
+    $bogus->{_hack_result} = _make_resp( {} );
     $rslt = eval {$bogus->elevation( @ele_loc )};
     ok(!$@, 'Should not throw an error on bad result if croak is false')
 	or diag($@);
     like($bogus->get('error'), qr{^Elevation result is missing element},
 	'Missing element error when going through getElevation');
 
-    $bogus->{_hack_result} = {USGS_Elevation_Point_Query_Service => []};
-    $rslt = eval {$bogus->elevation( @ele_loc )};
-    ok(!$@, 'Should not throw an error on bad result if croak is false')
-	or diag($@);
-    like($bogus->get('error'), qr{^Elevation result is missing element},
-	'Missing element error when going through getElevation');
-
-    $bogus->{_hack_result} = {
-	USGS_Elevation_Point_Query_Service => {
-	    Elevation_Query => 'Something bad happened',
+    $bogus->{_hack_result} = _make_resp(
+	{
+	    USGS_Elevation_Point_Query_Service => [],
 	},
-    };
+    );
+    $rslt = eval {$bogus->elevation( @ele_loc )};
+    ok(!$@, 'Should not throw an error on bad result if croak is false')
+	or diag($@);
+    like($bogus->get('error'), qr{^Elevation result is missing element},
+	'Missing element error when going through getElevation');
+
+    $bogus->{_hack_result} = _make_resp(
+	{
+	    USGS_Elevation_Point_Query_Service => {
+		Elevation_Query => 'Something bad happened',
+	    },
+	},
+    );
     $rslt = eval {$bogus->elevation( @ele_loc )};
     ok(!$@, 'Should not throw an error on bad result if croak is false')
 	or diag($@);
     like($bogus->get('error'), qr{^Something bad happened},
 	'Missing data error when going through getElevation');
 
-    $bogus->{_hack_result} = {
-	USGS_Elevation_Point_Query_Service => {
-	    Elevation_Query => {
-		Data_Source => $ele_dataset,
-		Data_ID	=> $ele_dataset,
-		Elevation => 58.6035683399111,
-		Units => 'FEET',
+    $bogus->{_hack_result} = _make_resp(
+	{
+	    USGS_Elevation_Point_Query_Service => {
+		Elevation_Query => {
+		    Data_Source => $ele_dataset,
+		    Data_ID	=> $ele_dataset,
+		    Elevation => 58.6035683399111,
+		    Units => 'FEET',
+		},
 	    },
 	},
-    };
+    );
     $rslt = eval {$bogus->getAllElevations( @ele_loc )};
     ok(!$bogus->get('error'),
 	'Should not declare an error processing an individual point')
@@ -560,6 +573,19 @@ _skip_on_server_summary();
 
 done_testing();
 
+{
+    my $json;
+    sub _make_resp {
+	my ( $content, $code ) = @_;
+	$json ||= JSON->new()->utf8()->allow_nonref();
+	defined $code
+	    or $code = HTTP::Status->HTTP_OK;
+	my $resp = HTTP::Response->new( $code );
+	$resp->content( $json->encode( $content ) );
+	return $resp;
+    }
+}
+
 sub _skip_tests {
     my ( $count ) = @_;
     diag $@;
@@ -620,7 +646,8 @@ my $VAR1;
 sub Geo::WebService::Elevation::USGS::_get_bad_som {
     my ( $self ) = @_;
     return ( $VAR1 ||= HTTP::Response->new(
-	500, 'Internal Server Error' ) );
+	    HTTP::Status->HTTP_INTERNAL_SERVER_ERROR,
+	    'Internal Server Error' ) );
 }
 
 1;
