@@ -255,6 +255,7 @@ sub elevation {
     if ($valid) {
 	$rslt = [grep {is_valid($_)} @$rslt];
     }
+    # TODO compatibility
     return wantarray ? @$rslt : $rslt;
 }
 
@@ -291,9 +292,9 @@ sub getAllElevations {
 
 	$self->_pause();
 
-	my $raw;
+	my @rslt;
 	eval {
-	    $raw = $self->_request(
+	    @rslt = $self->_request(
 		x	=> $lon,
 		y	=> $lat,
 		units	=> $self->{units},
@@ -303,11 +304,6 @@ sub getAllElevations {
 	    $self->_error( $@ );
 	    next;
 	};
-
-	my $cooked = $self->_digest($raw);
-	ref $cooked eq 'HASH'
-	    or next;
-	my @rslt = ( $cooked );
 
 	if ($valid) {
 	    @rslt = grep {is_valid($_)} @rslt;
@@ -396,14 +392,10 @@ sub getElevation {
 	    next;
 	};
 
-	'HASH' eq ref $rslt
-	    and $only
-	    and $rslt = { double =>
-	    $rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}{Elevation}
-	};
+	$rslt
+	    or next;
 
-	my $info = $self->_digest( $rslt ) or next;
-	return $info;
+	return $only ? $rslt->{Elevation} : $rslt;
 
     } continue {
 
@@ -542,64 +534,6 @@ sub _set_unsigned_integer {
 #
 #	The author reserves the right to change these without notice.
 
-#	$rslt = $ele->_digest( $rslt );
-#
-#	This method takes the results of an elevation query and turns
-#	them into the desired hash. If an error occurred, it is recorded
-#	in the 'error' attribute, and either an exception is thrown (if
-#	'croak' is true) or undef is returned (otherwise). If no error
-#	occurred, we burrow down into the response, find the actual
-#	query results, and return that.
-
-sub _digest {
-    my ( $self, $rslt ) = @_;
-
-##  use YAML;
-##  warn 'Debug - response content is ', ref $rslt ? Dump( $rslt ) : $rslt;
-
-    my $round;
-    {
-	my $prec = $self->{places};
-	$round = defined $prec ? sub {
-	    return is_valid($_[0]) ?
-		sprintf ("%.${prec}f", $_[0]) :
-		$_[0];
-	} : sub { return $_[0] };
-    }
-
-    my $error;
-    if (ref $rslt eq 'HASH') {
-	# The following line is because we may be handling an 'elevation
-	# only' request.
-	exists $rslt->{double}
-	    and return $round->( $rslt->{double} );
-	foreach my $key (
-#x#	    qw{USGS_Elevation_Web_Service_Query Elevation_Query}
-	    qw{ USGS_Elevation_Point_Query_Service Elevation_Query }
-	) {
-	    (ref $rslt eq 'HASH' && exists $rslt->{$key}) or do {
-		$error = "Elevation result is missing element {$key}";
-		last;
-	    };
-	    $rslt = $rslt->{$key};
-	}
-	unless (ref $rslt) {
-	    $rslt =~ m/ [.?!] \z /smx or $rslt .= '.';
-	    $error = $rslt;
-	}
-    } else {
-	$error = "No data found in query result";
-    }
-
-    $error
-	and return $self->_error( $error );
-
-    if ( $rslt ) {
-	$rslt->{Elevation} = $round->( $rslt->{Elevation} );
-    }
-    return $rslt;
-}
-
 #	$ele->_error($text);
 #
 #	Set the error attribute, and croak if the croak attribute is
@@ -691,9 +625,12 @@ sub _instance {
 #	$rslt = $self->_request( %args );
 #
 #	This private method requests data from the USGS' web service.
-#	The %args are the arguments for the request. The return is a
-#	reference to a hash containing the parsed JSON returned from the
-#	NAD server.
+#	The %args are the arguments for the request:
+#	    {x} => longitude (West is negative)
+#	    {y} => latitude (South is negative)
+#	    {units} => desired units ('Meters' or 'Feet')
+#	The return is a reference to a hash containing the parsed JSON
+#	returned from the NAD server.
 
 sub _request {
     my ( $self, %arg ) = @_;
@@ -731,18 +668,34 @@ sub _request {
 
     $rslt = $json->decode( $rslt->content() );
 
-    # TODO all the following code is for compatibility. The 'HASH' check
-    # is for the benefit of {_hack_response}.
-    if ( 'HASH' eq ref $rslt and
-	'HASH' eq ref $rslt->{USGS_Elevation_Point_Query_Service} and
-	'HASH' eq ref $rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}
+    defined $rslt
+	or return $self->_error( 'No data found in query result' );
+
+    foreach my $key (
+	qw{ USGS_Elevation_Point_Query_Service Elevation_Query }
     ) {
-	$rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}{Units}
-	    = uc $rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}{Units};
-	$rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}{Data_ID}
-	    = $rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}{Data_Source};
+	'HASH' eq ref $rslt
+	    and exists $rslt->{$key}
+	    or return $self->_error(
+	    "Elevation result is missing element {$key}" );
+	$rslt = $rslt->{$key};
     }
+
+    unless ( ref $rslt ) {
+	$rslt =~ s/ (?<! [.?!] ) \z /./smx;
+	return $self->_error( $rslt );
+    }
+
+    my $places;
+    defined $rslt->{Elevation}
+	and defined( $places = $self->get( 'places' ) )
+	and $rslt->{Elevation} = sprintf '%.*f', $places, $rslt->{Elevation};
+
+    # TODO all the following code is for compatibility.
+    $rslt->{Units} = uc $rslt->{Units};
+    $rslt->{Data_ID} = $rslt->{Data_Source};
     # TODO all the preceding code is for compatibility.
+
     return $rslt;
 }
 
