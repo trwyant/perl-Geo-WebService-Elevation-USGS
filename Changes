@@ -1,3 +1,15 @@
+0.100_01	2014-07-26	T. R. Wyant
+  Convert to use the NED server at http://ned.usgs.gov. This provides no
+    data set selection, and only a single elevation point, so there has
+    been extensive rewriting.
+  A 'compatible' attribute (true by default) has been added to control
+    the presentation of output. If true, returned results are modified
+    to be as close as feasible to the data returned from the old GISDATA
+    server, but user-visible differences remain. If false, the data
+    returned represent the NED server data more closely and naturally.
+  All methods and attributes specific to the old GISDATA server are
+    deprecated. See the NOTICE section of the POD for the gory details.
+
 0.011		2013-01-27	T. R. Wyant
   Fix error handling to deal with change in error message (from "No
     elevation value was returned" to "No elevation values were
