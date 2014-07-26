@@ -10,6 +10,7 @@ use warnings;
 
 use Geo::WebService::Elevation::USGS;
 use Pod::Usage;
+use Scalar::Util qw{ looks_like_number };
 
 our $VERSION = '0.100';
 
@@ -123,6 +124,31 @@ sub cmd_new {
     return $ele = Geo::WebService::Elevation::USGS->new(@_);
 }
 
+# The 'show' command displays the values of the named attributes. If
+# none are given, all are displayed.
+
+sub cmd_show {
+    my @args = @_;
+    unless ( @args ) {
+	my %attr = $ele->attributes();
+	@args = sort keys %attr;
+    }
+    foreach my $name ( @args ) {
+	my $val = _format( $ele->get( $name ) );
+	print "$name\t=> $val\n";
+    }
+    return;
+}
+
+sub _format {
+    my ( $val ) = @_;
+    defined $val
+	or return 'undef';
+    looks_like_number( $val )
+	and return $val;
+    return "'$val'";
+}
+
 # The 'sources' command sets the source attribute to a reference to the
 # array of its arguments (which may be empty).
 
@@ -199,11 +225,20 @@ This command displays this text.
 
 This command creates a new Geo::WebService::Elevation::USGS object.
 
+=head2 show
+
+ usgs_ele> show
+ usgs_ele> show retry
+
+This command displays the values of the named attributes. If no
+attribute names are given, all are displayed.
+
 =head2 set
 
  usgs_ele> set units METERS
 
-This command sets the given attribute to the given value.
+This command sets the given attribute to the given value. The value is
+not case-sensitive, and bogus values are equivalent to C<'Feet'>.
 
 =head2 sources
 
