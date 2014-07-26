@@ -404,12 +404,17 @@ sub getElevation {
 		X_Value	=> $lon,
 		Y_Value	=> $lat,
 		Elevation_Units	=> $self->{units},
-		Elevation_Only	=> $only ? 'true' : 'false',
 	    );
 	    1;
 	} or do {
 	    $self->_error( $@ );
 	    next;
+	};
+
+	'HASH' eq ref $rslt
+	    and $only
+	    and $rslt = { double =>
+	    $rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}{Elevation}
 	};
 
 	my $info = $self->_digest( $rslt ) or next;
@@ -593,7 +598,7 @@ sub _digest {
 	    qw{ USGS_Elevation_Point_Query_Service Elevation_Query }
 	) {
 	    (ref $rslt eq 'HASH' && exists $rslt->{$key}) or do {
-		$error = "Elevation result is missing tag <$key>";
+		$error = "Elevation result is missing element {$key}";
 		last;
 	    };
 	    $rslt = $rslt->{$key};
@@ -764,14 +769,6 @@ sub _request {
 
 	my $json = JSON->new()->utf8();
 	$rslt = $json->decode( $rslt->content() );
-
-	# TODO all the following code is for compatibility.
-	defined $arg{Elevation_Only}
-	    and $arg{Elevation_Only} =~ m/ \A true \z /smxi
-	    and return +{
-	    double	=> $rslt->{USGS_Elevation_Point_Query_Service}{Elevation_Query}{Elevation},
-	};
-	# TODO all the preceding code is for compatibility.
     }
 
     # TODO all the following code is for compatibility. The 'HASH' check

@@ -190,7 +190,11 @@ SKIP: {
     # anyway. If you do, contact me, and if I can't talk you out of it
     # we will come up with something.
     $bogus->{_hack_result} = {
-	double => 58.6035683399111,
+	USGS_Elevation_Point_Query_Service	=> {
+	    Elevation_Query	=> {
+		Elevation	=> 58.6035683399111,
+	    },
+	},
     };
     $rslt = eval {$bogus->getElevation( @ele_loc , undef, 1)};
     ok(!$@, 'getElevation (only) succeeded') or diag($@);
@@ -320,15 +324,15 @@ SKIP: {
     $rslt = eval {$bogus->elevation( @ele_loc )};
     ok(!$@, 'Should not throw an error on bad result if croak is false')
 	or diag($@);
-    like($bogus->get('error'), qr{^Elevation result is missing tag},
-	'Missing tag error when going through getElevation');
+    like($bogus->get('error'), qr{^Elevation result is missing element},
+	'Missing element error when going through getElevation');
 
     $bogus->{_hack_result} = {USGS_Elevation_Point_Query_Service => []};
     $rslt = eval {$bogus->elevation( @ele_loc )};
     ok(!$@, 'Should not throw an error on bad result if croak is false')
 	or diag($@);
-    like($bogus->get('error'), qr{^Elevation result is missing tag},
-	'Missing tag error when going through getElevation');
+    like($bogus->get('error'), qr{^Elevation result is missing element},
+	'Missing element error when going through getElevation');
 
     $bogus->{_hack_result} = {
 	USGS_Elevation_Point_Query_Service => {
