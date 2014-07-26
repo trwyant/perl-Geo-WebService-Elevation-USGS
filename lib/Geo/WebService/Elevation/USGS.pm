@@ -575,13 +575,11 @@ sub _digest {
     my $round;
     {
 	my $prec = $self->{places};
-	if (defined $prec) {
-	    $round = sub {
-		is_valid($_[0]) ? sprintf ("%.${prec}f", $_[0])
-		: $_[0]}
-	}
-	# TODO following logic would be easier if $round were always
-	# defined
+	$round = defined $prec ? sub {
+	    return is_valid($_[0]) ?
+		sprintf ("%.${prec}f", $_[0]) :
+		$_[0];
+	} : sub { return $_[0] };
     }
 
     my $error;
@@ -589,9 +587,7 @@ sub _digest {
 	# The following line is because we may be handling an 'elevation
 	# only' request.
 	exists $rslt->{double}
-	    and return $round ?
-		$round->($rslt->{double}) :
-		$rslt->{double};
+	    and return $round->( $rslt->{double} );
 	foreach my $key (
 #x#	    qw{USGS_Elevation_Web_Service_Query Elevation_Query}
 	    qw{ USGS_Elevation_Point_Query_Service Elevation_Query }
@@ -613,12 +609,12 @@ sub _digest {
     $error
 	and return $self->_error( $error );
 
-    if ($rslt && $round) {
-	if (ref $rslt->{Elevation}) {
+    if ( $rslt ) {
+	if ( ref $rslt->{Elevation} ) {
 	    $rslt->{Elevation} = [
-		map {$round->($_)} @{$rslt->{Elevation}}];
+		map { $round->($_) } @{$rslt->{Elevation}}];
 	} else {
-	    $rslt->{Elevation} = $round->($rslt->{Elevation});
+	    $rslt->{Elevation} = $round->( $rslt->{Elevation} );
 	}
     }
     return $rslt;
