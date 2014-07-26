@@ -305,25 +305,10 @@ sub getAllElevations {
 	};
 
 	my $cooked = $self->_digest($raw);
-	ref $cooked eq 'HASH' or next;
-	my @rslt;
-	my $ref = ref $cooked->{Data_ID};
-	if ($ref eq 'ARRAY') {
-###	    my $limit = @{$cooked->{Data_ID}} - 1;
-	    foreach my $inx (0 .. (scalar @{$cooked->{Data_ID}} - 1)) {
-		push @rslt, {
-		    Data_Source => $cooked->{Data_Source}[$inx],
-		    Data_ID => $cooked->{Data_ID}[$inx],
-		    Elevation => $cooked->{Elevation}[$inx],
-		    Units => $cooked->{Units}[$inx],
-		};
-	    }
-	} elsif ($ref) {
-	    $self->_error( "Unexpected $ref reference in {Data_ID}" );
-	    next;
-	} else {	# One of the ActiveState MSWin32 variants seems to do this.
-	    push @rslt, $cooked;
-	}
+	ref $cooked eq 'HASH'
+	    or next;
+	my @rslt = ( $cooked );
+
 	if ($valid) {
 	    @rslt = grep {is_valid($_)} @rslt;
 	}
@@ -610,12 +595,7 @@ sub _digest {
 	and return $self->_error( $error );
 
     if ( $rslt ) {
-	if ( ref $rslt->{Elevation} ) {
-	    $rslt->{Elevation} = [
-		map { $round->($_) } @{$rslt->{Elevation}}];
-	} else {
-	    $rslt->{Elevation} = $round->( $rslt->{Elevation} );
-	}
+	$rslt->{Elevation} = $round->( $rslt->{Elevation} );
     }
     return $rslt;
 }
