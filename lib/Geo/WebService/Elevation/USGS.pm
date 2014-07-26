@@ -294,9 +294,9 @@ sub getAllElevations {
 	my $raw;
 	eval {
 	    $raw = $self->_request(
-		X_Value	=> $lon,
-		Y_Value	=> $lat,
-		Elevation_Units	=> $self->{units},
+		x	=> $lon,
+		y	=> $lat,
+		units	=> $self->{units},
 	    );
 	    1;
 	} or do {
@@ -401,9 +401,9 @@ sub getElevation {
 	my $rslt;
 	eval {
 	    $rslt = $self->_request(
-		X_Value	=> $lon,
-		Y_Value	=> $lat,
-		Elevation_Units	=> $self->{units},
+		x	=> $lon,
+		y	=> $lat,
+		units	=> $self->{units},
 	    );
 	    1;
 	} or do {
@@ -743,17 +743,15 @@ sub _request {
 	my $ua = $self->{_transport_object} ||=
 	    LWP::UserAgent->new( timeout => $self->{timeout} );
 
-
-	my $units = ( $arg{Elevation_Units} =~ m/ \A meters \z /smxi ) ? 'Meters' :
-	    'Feet';
+	defined $arg{units}
+	    or $arg{units} = 'Feet';
+	$arg{units} = $arg{units} =~ m/ \A meters \z /smxi
+	    ? 'Meters'
+	    : 'Feet';
+	$arg{output}	= 'json';
 
 	my $uri = URI->new( USGS_URL );
-	$uri->query_form( {
-		x	=> $arg{X_Value},
-		y	=> $arg{Y_Value},
-		units	=> $units,
-		output	=> 'json',
-	    } );
+	$uri->query_form( \%arg );
 	my $rqst = HTTP::Request::Common::GET( $uri );
 
 	$self->{trace} and print STDERR $rqst->as_string();
