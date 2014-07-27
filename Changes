@@ -1,3 +1,8 @@
+0.100_02	2014-07-27	T. R. Wyant
+  Remove bogus use of XML::Parser.
+  Install deprecation logic.
+  Test with 'compatible' set false.
+
 0.100_01	2014-07-26	T. R. Wyant
   Convert to use the NED server at http://ned.usgs.gov. This provides no
     data set selection, and only a single elevation point, so there has
