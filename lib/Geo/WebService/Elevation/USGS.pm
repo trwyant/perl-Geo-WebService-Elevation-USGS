@@ -306,6 +306,8 @@ this module it returns an array reference in scalar context.
 sub getAllElevations {
     my ( $self, $lat, $lon, $valid ) = _latlon( @_ );
 
+    _deprecate( 'subroutine' );
+
     my $rslt = $self->_elevation( $lat, $lon, $valid )
 	or return;
 
@@ -329,6 +331,8 @@ the elevation, rather than the hash reference described below.
 
 sub getElevation {
     my ($self, $lat, $lon, undef, $only) = _latlon( @_ );
+
+    _deprecate( 'subroutine' );
 
     my $rslt = $self->_elevation( $lat, $lon )
 	or return;
@@ -384,6 +388,7 @@ result in an exception being thrown.
 		or croak "No such attribute as '$name'";
 	    exists $mutator{$name}
 		or croak "Attribute '$name' is read-only";
+	    _deprecate( attribute => $name );
 	    my $holder = $access_type{$name}->( $self, $name );
 	    $mutator{$name}->( $holder, $name, $val );
 	    $clean ||= $clean_transport_object{$name};
@@ -459,6 +464,50 @@ sub _set_unsigned_integer {
 #	Private methods
 #
 #	The author reserves the right to change these without notice.
+
+{
+    my %dep = (
+	attribute	=> {
+	    dflt	=> sub { return },
+	    item	=> {
+		default_ns	=> 0,
+		proxy		=> 0,
+		source		=> 0,
+		use_all_limit	=> 0,
+	    },
+	},
+	subroutine	=> {
+	    dflt	=> sub {
+		( my $name = ( caller( 2 ) )[3] ) =~ s/ .* :: //smx;
+		return $name;
+	    },
+	    item	=> {
+		getElevation		=> 0,
+		getAllElevations	=> 0,
+	    },
+	},
+    );
+
+    sub _deprecate {
+	my ( $group, $item ) = @_;
+	my $info = $dep{$group}
+	    or confess "Programming error - Deprecation group '$group' unknown";
+	defined $item
+	    or defined( $item = $info->{dflt}->() )
+	    or croak "Programming error - No item default for group '$group'";
+	$info->{item}{$item}
+	    or return;
+	my $msg = ucfirst "$group $item is deprecated";
+	$info->{item}{$item} > 2
+	    and croak "Fatal - $msg";
+	warnings::enabled( 'deprecated' )
+	    or return;
+	carp "Warning - $msg";
+	$info->{item}{$item} == 1
+	    and $info->{item}{$item} = 0;
+	return;
+    }
+}
 
 #	$rslt = $ele->_elevation( $lat, $lon, $only );
 #
