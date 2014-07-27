@@ -113,7 +113,6 @@ use HTTP::Request::Common;
 use JSON;
 use LWP::UserAgent;
 use Scalar::Util 1.10 qw{ blessed looks_like_number };
-use XML::Parser;
 
 our $VERSION = '0.100_01';
 
