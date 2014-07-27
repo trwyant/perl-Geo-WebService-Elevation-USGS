@@ -3,7 +3,7 @@ package main;
 use strict;
 use warnings;
 
-use Test::More tests => 48;
+use Test::More 0.88;
 
 my $module = 'Geo::WebService::Elevation::USGS';
 
@@ -105,5 +105,7 @@ ok($rslt, 'is_valid({Elevation => 0}) should be true');
 $rslt = eval {$ele->is_valid([])};
 like ($@, qr{ \A\QARRAY reference not understood}smx,
     'is_valid() should croak when passed an array reference');
+
+done_testing;
 
 1;

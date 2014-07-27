@@ -6,7 +6,7 @@ use warnings;
 use HTTP::Response;
 use HTTP::Status;
 use JSON;
-use Test::More;
+use Test::More 0.88;
 
 use constant BAD_EXTENT_SOURCE => 'NED.AK_NED';
 use constant NO_DATA_FOUND_RE => qr{ \A \QNo data found in query result}smx;
@@ -569,6 +569,22 @@ SKIP: {
     is($rslt->[0]{Elevation}, $ele_mt, "$kind elevation is $ele_mt");
 }
 
+$ele->set( compatible => 0 );
+
+SKIP: {
+    $rslt = eval {
+	$ele->elevation( @ele_loc );
+    };
+    _skip_on_server_error( $ele, 1 );
+    is_deeply $rslt, {
+	x		=> $ele_loc[1],
+	y		=> $ele_loc[0],
+	Data_Source	=> $ele_dataset,
+	Elevation	=> $ele_mt,
+	Units		=> 'Meters',
+    }, q{elevation() with 'compatible' set false};
+}
+
 _skip_on_server_summary();
 
 done_testing();
@@ -615,7 +631,7 @@ sub _skip_it {
 
     sub _skip_on_server_error {
 	my ($ele, $how_many) = @_;
-	local $_ = $ele->get('error') or return;
+	local $_ = $ele->get( 'error' ) or return;
 	(m/^5\d\d\b/ ||
 	    m/^ERROR: No Elevation values were returned/i ||
 	    m/^ERROR: No Elevation value was returned/i ||
