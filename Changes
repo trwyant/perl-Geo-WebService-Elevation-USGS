@@ -1,3 +1,6 @@
+0.101		2014-08-02	T. R. Wyant
+  No changes since 0.100_02.
+
 0.100_02	2014-07-27	T. R. Wyant
   Remove bogus use of XML::Parser.
   Install deprecation logic.
