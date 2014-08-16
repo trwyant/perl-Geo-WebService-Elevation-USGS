@@ -206,12 +206,18 @@ SKIP: {
     is($rslt, '58.6035683399111',
 	'getElevation (only) returned 58.6035683399111');
 
+=begin comment
+
     SKIP: {
 	$rslt = eval {$bogus->getElevation(40, 90, 'NED.CONUS_NED_13E')};
 	ok(!$@, 'getElevation without returned value succeeded')
 	    or _skip_tests( 3 );
 	ok( ref $rslt eq 'HASH', 'getElevation result is a hash ref' );
     }
+
+=end comment
+
+=cut
 
     $bogus->{_hack_result} = $ele->_get_bad_som();
     $rslt = eval {$bogus->getElevation( @ele_loc , undef, 1)};
@@ -632,6 +638,7 @@ sub _skip_it {
     sub _skip_on_server_error {
 	my ($ele, $how_many) = @_;
 	local $_ = $ele->get( 'error' ) or return;
+	s/ \s+ \z //smx;
 	(m/^5\d\d\b/ ||
 	    m/^ERROR: No Elevation values were returned/i ||
 	    m/^ERROR: No Elevation value was returned/i ||
