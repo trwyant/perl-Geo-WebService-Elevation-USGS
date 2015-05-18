@@ -3,6 +3,7 @@
 /_build
 /cover_db
 /Debian_CPANTS.txt
+/foo
 /Makefile
 /MANIFEST.bak
 /META.json
@@ -10,4 +11,6 @@
 /MYMETA.json
 /MYMETA.yml
 /nytprof*
+/TODO
 /xt/author/optionals
+.*.swp
