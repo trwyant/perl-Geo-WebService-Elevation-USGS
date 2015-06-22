@@ -58,6 +58,10 @@ every time it is used, and six months after that it will become fatal.
 After a further six months, all code related to the deprecated
 functionality will be removed.
 
+In the meantime you can suppress the warnings with
+
+ no warnings qw{ deprecated };
+
 At the point where the deprecated functionality warns on every use, the
 C<compatible> attribute will also become deprecated. Six months after
 that, its default will become false, and it will warn when set true. Six
