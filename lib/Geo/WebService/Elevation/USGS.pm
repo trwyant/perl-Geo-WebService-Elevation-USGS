@@ -117,7 +117,7 @@ use Scalar::Util 1.10 qw{ blessed looks_like_number };
 our $VERSION = '0.101';
 
 use constant BEST_DATA_SET => -1;
-use constant USGS_URL => 'http://ned.usgs.gov/epqs/pqs.php';
+use constant USGS_URL => 'http://nationalmap.gov/epqs/pqs.php';
 
 my $using_time_hires;
 {
