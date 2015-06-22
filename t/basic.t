@@ -43,22 +43,27 @@ eval {$ele->set(places => undef)};
 ok(!$@, 'Setting places to undef should work');
 is($ele->get('places'), undef, 'and yield undef for places');
 $ele->set(places => 2);	# For subsequent testing
-eval {$ele->set(use_all_limit => -1)};
-ok(!$@, 'Setting use_all_limit negative should work');
-is($ele->get('use_all_limit'), '-1', 'and yield -1 for use_all_limit.');
-eval {$ele->set(use_all_limit => 0)};
-ok(!$@, 'Setting use_all_limit zero should work');
-is($ele->get('use_all_limit'), '0', 'and yield 0 for use_all_limit.');
-eval {$ele->set(use_all_limit => +1)};
-ok(!$@, 'Setting use_all_limit positive should work');
-is($ele->get('use_all_limit'), '1', 'and yield 1 for use_all_limit.');
-eval {$ele->set(use_all_limit => 'fubar')};
-ok($@, 'Setting use_all_limit to a string should not work');
-is($ele->get('use_all_limit'), '1', 'and leave use_all_limit unchanged.');
-eval {$ele->set(use_all_limit => undef)};
-ok($@, 'Setting use_all_limit to undef should not work');
-is($ele->get('use_all_limit'), '1', 'and leave use_all_limit unchanged.');
-eval {$ele->set(use_all_limit => 5)};	# for subsequent testing
+
+{
+    no warnings qw{ deprecated };
+
+    eval {$ele->set(use_all_limit => -1)};
+    ok(!$@, 'Setting use_all_limit negative should work');
+    is($ele->get('use_all_limit'), '-1', 'and yield -1 for use_all_limit.');
+    eval {$ele->set(use_all_limit => 0)};
+    ok(!$@, 'Setting use_all_limit zero should work');
+    is($ele->get('use_all_limit'), '0', 'and yield 0 for use_all_limit.');
+    eval {$ele->set(use_all_limit => +1)};
+    ok(!$@, 'Setting use_all_limit positive should work');
+    is($ele->get('use_all_limit'), '1', 'and yield 1 for use_all_limit.');
+    eval {$ele->set(use_all_limit => 'fubar')};
+    ok($@, 'Setting use_all_limit to a string should not work');
+    is($ele->get('use_all_limit'), '1', 'and leave use_all_limit unchanged.');
+    eval {$ele->set(use_all_limit => undef)};
+    ok($@, 'Setting use_all_limit to undef should not work');
+    is($ele->get('use_all_limit'), '1', 'and leave use_all_limit unchanged.');
+    eval {$ele->set(use_all_limit => 5)};	# for subsequent testing
+}
 
 {
     my %rslt = eval {$ele->attributes()};

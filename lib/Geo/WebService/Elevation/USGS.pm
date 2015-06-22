@@ -8,13 +8,13 @@ Geo::WebService::Elevation::USGS - Elevation queries against USGS web services.
  
  my $eq = Geo::WebService::Elevation::USGS->new();
  print "The elevation of the White House is ",
-   $eq->getElevation(38.898748, -77.037684)->{Elevation},
+   $eq->elevation( 38.898748, -77.037684 )->{Elevation},
    " feet above sea level.\n";
 
 =head1 NOTICE
 
 The GIS data web service this module was originally based on has gone
-the way of the dodo. This release uses the NAD service, which is similar
+the way of the dodo. This release uses the NED service, which is similar
 but simpler. I have taken advantage of the new service's ability to
 provide output in JSON to simplify processing, and have added a
 compatibility mode to make the output from the new service as much like
@@ -52,11 +52,11 @@ deprecated:
 * Methods C<getElevation()> and C<getAllElevations()>. The
 C<elevation()> method will remain.
 
-On or about February 1 2015, all deprecated functionality will warn the
-first time it is used. Six months after that, it will warn every time it
-is used, and six months after that it will become fatal. After a further
-six months, all code related to the deprecated functionality will be
-removed.
+Starting with release [% next_version %], all deprecated functionality will warn
+the first time it is used. Six months after that release, it will warn
+every time it is used, and six months after that it will become fatal.
+After a further six months, all code related to the deprecated
+functionality will be removed.
 
 At the point where the deprecated functionality warns on every use, the
 C<compatible> attribute will also become deprecated. Six months after
@@ -469,10 +469,10 @@ sub _set_unsigned_integer {
 	attribute	=> {
 	    dflt	=> sub { return },
 	    item	=> {
-		default_ns	=> 0,
-		proxy		=> 0,
-		source		=> 0,
-		use_all_limit	=> 0,
+		default_ns	=> 1,
+		proxy		=> 1,
+		source		=> 1,
+		use_all_limit	=> 1,
 	    },
 	},
 	subroutine	=> {
@@ -481,8 +481,8 @@ sub _set_unsigned_integer {
 		return $name;
 	    },
 	    item	=> {
-		getElevation		=> 0,
-		getAllElevations	=> 0,
+		getElevation		=> 1,
+		getAllElevations	=> 1,
 	    },
 	},
     );

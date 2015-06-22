@@ -8,6 +8,8 @@ use HTTP::Status;
 use JSON;
 use Test::More 0.88;
 
+no warnings qw{ deprecated };
+
 use constant BAD_EXTENT_SOURCE => 'NED.AK_NED';
 use constant NO_DATA_FOUND_RE => qr{ \A \QNo data found in query result}smx;
 
