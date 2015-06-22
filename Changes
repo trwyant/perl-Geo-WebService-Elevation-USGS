@@ -1,3 +1,9 @@
+0.101_02	2015-06-22	T. R. Wyant
+  Further deprecate getElevation() and friends.
+    A warning will now be generated on the first call to getElevation()
+    and getAllElevations(), and the first access (or modification) of
+    attributes 'default_ns', 'proxy', 'source', and 'use_all_limit'.
+
 0.101_01	2015-06-22	T. R. Wyant
   Change name of server providing service from ned.usgs.gov to
     nationalmap.gov.
