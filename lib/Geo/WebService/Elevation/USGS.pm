@@ -52,7 +52,7 @@ deprecated:
 * Methods C<getElevation()> and C<getAllElevations()>. The
 C<elevation()> method will remain.
 
-Starting with release [%% next_version %%], all deprecated functionality will warn
+Starting with release 0.104_01, all deprecated functionality will warn
 every time it is used. Six months after that it will become fatal.
 After a further six months, all code related to the deprecated
 functionality will be removed.
@@ -117,7 +117,7 @@ use JSON;
 use LWP::UserAgent;
 use Scalar::Util 1.10 qw{ blessed looks_like_number };
 
-our $VERSION = '0.103';
+our $VERSION = '0.104_01';
 
 use constant BEST_DATA_SET => -1;
 use constant USGS_URL => 'http://nationalmap.gov/epqs/pqs.php';
