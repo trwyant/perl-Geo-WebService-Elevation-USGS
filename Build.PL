@@ -22,18 +22,11 @@ my %args = (
 	perl	=> $meta->requires_perl(),
     ),
     add_to_cleanup => [ qw{ xt/optionals } ],
-    dynamic_config => 1,
     license => 'perl',
 );
 
-$mbv >= 0.28 and $args{meta_merge} = {
-    no_index => {
-	directory => [qw{inc t}],
-    },
-    resources => {
-	bugtracker => 'https://rt.cpan.org/Public/Dist/Display.html?Name=Geo-WebService-Elevation-USGS',
-    },
-};
+$mbv >= 0.28
+    and $args{meta_merge} = $meta->meta_merge();
 
 # Don't require Module::Build if we're making a distribution, since the
 # user can use ExtUtils::MakeMaker.
