@@ -52,9 +52,8 @@ deprecated:
 * Methods C<getElevation()> and C<getAllElevations()>. The
 C<elevation()> method will remain.
 
-Starting with release [% next_version %], all deprecated functionality will warn
-the first time it is used. Six months after that release, it will warn
-every time it is used, and six months after that it will become fatal.
+Starting with release [%% next_version %%], all deprecated functionality will warn
+every time it is used. Six months after that it will become fatal.
 After a further six months, all code related to the deprecated
 functionality will be removed.
 
@@ -473,10 +472,10 @@ sub _set_unsigned_integer {
 	attribute	=> {
 	    dflt	=> sub { return },
 	    item	=> {
-		default_ns	=> 1,
-		proxy		=> 1,
-		source		=> 1,
-		use_all_limit	=> 1,
+		default_ns	=> 2,
+		proxy		=> 2,
+		source		=> 2,
+		use_all_limit	=> 2,
 	    },
 	},
 	subroutine	=> {
@@ -485,8 +484,8 @@ sub _set_unsigned_integer {
 		return $name;
 	    },
 	    item	=> {
-		getElevation		=> 1,
-		getAllElevations	=> 1,
+		getElevation		=> 2,
+		getAllElevations	=> 2,
 	    },
 	},
     );
