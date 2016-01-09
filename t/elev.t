@@ -30,8 +30,8 @@ my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(
     my $ua = _skip_it(eval {LWP::UserAgent->new()},
 	'Unable to instantiate LWP::UserAgent (should not happen)');
 
-    my $pxy = _skip_it(eval {$ele->get('proxy')},
-	'Unable to retrieve proxy setting');
+    my $pxy = _skip_it(eval { $ele->USGS_URL() },
+	'Unable to retrieve USGS URL');
 
     my $rslt = _skip_it(eval {$ua->get($pxy)},
 	'Unable to execute GET (should not happen)');
