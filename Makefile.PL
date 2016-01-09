@@ -6,11 +6,11 @@ use warnings;
 use lib qw{ inc };
 
 use ExtUtils::MakeMaker;
-use Geo::WebService::Elevation::USGS::Meta;
+use My::Module::Meta;
 
 (my $mmv = ExtUtils::MakeMaker->VERSION) =~ s/_//g;
 
-my $meta = Geo::WebService::Elevation::USGS::Meta->new();
+my $meta = My::Module::Meta->new();
 
 my %args = (
     NAME => 'Geo::WebService::Elevation::USGS',

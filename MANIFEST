@@ -2,8 +2,8 @@ Build.PL
 Changes
 eg/README
 eg/usgs_ele
-inc/Geo/WebService/Elevation/USGS/Build.pm
-inc/Geo/WebService/Elevation/USGS/Meta.pm
+inc/My/Module/Build.pm
+inc/My/Module/Meta.pm
 lib/Geo/WebService/Elevation/USGS.pm
 LICENSES/Artistic
 LICENSES/Copying

@@ -1,4 +1,4 @@
-package Geo::WebService::Elevation::USGS::Build;
+package My::Module::Build;
 
 use strict;
 use warnings;
@@ -122,7 +122,7 @@ __END__
 
 =head1 NAME
 
-Geo::WebService::Elevation::USGS::Build - Extend Module::Build for Geo::WebService::Elevation::USGS
+My::Module::Build - Extend Module::Build for Geo::WebService::Elevation::USGS
 
 =head1 SYNOPSIS
 

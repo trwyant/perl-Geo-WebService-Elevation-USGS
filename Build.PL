@@ -5,13 +5,13 @@ use warnings;
 
 use lib qw{ inc };
 
-use Geo::WebService::Elevation::USGS::Build;
-use Geo::WebService::Elevation::USGS::Meta;
+use My::Module::Build;
+use My::Module::Meta;
 use Module::Build;
 
 (my $mbv = Module::Build->VERSION) =~ s/_//g;
 
-my $meta = Geo::WebService::Elevation::USGS::Meta->new();
+my $meta = My::Module::Meta->new();
 
 my %args = (
     dist_author => 'Tom Wyant (wyant at cpan dot org)',
@@ -40,6 +40,6 @@ $mbv >= 0.28 and $args{meta_merge} = {
 $mbv >= 0.34
     and $args{auto_configure_requires} = !$meta->distribution();
 
-my $bldr = Geo::WebService::Elevation::USGS::Build->new (%args);
+my $bldr = My::Module::Build->new (%args);
 
 $bldr->create_build_script ();
