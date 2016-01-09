@@ -252,6 +252,13 @@ containing its arguments.
 This command displays (without an argument) or changes (with an
 argument) the value of C<$Geo::WebService::Elevation::USGS::THROTTLE>.
 
+=head2 time
+
+ usgs_ele> time elevation 40 -90
+
+This pseudo-command takes as its arguments a real command, executes it,
+and displays the time elapsed.
+
 =head1 AUTHOR
 
 Thomas R. Wyant, III F<wyant at cpan dot org>
