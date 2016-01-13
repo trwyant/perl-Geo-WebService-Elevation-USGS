@@ -670,7 +670,7 @@ sub Geo::Point::latlong {
 
 my $VAR1;
 sub Geo::WebService::Elevation::USGS::_get_bad_som {
-    my ( $self ) = @_;
+##  my ( $self ) = @_;
     return ( $VAR1 ||= HTTP::Response->new(
 	    HTTP::Status->HTTP_INTERNAL_SERVER_ERROR,
 	    'Internal Server Error' ) );

@@ -63,7 +63,7 @@ sub _get_tests_without_optional_modules {
 
 
 sub ACTION_make_optional_modules_tests {
-    my ( $self, @args ) = @_;
+##  my ( $self, @args ) = @_;		# Arguments unused
 
     my $hider = _get_hider() or do {
 #	warn "Neither Devel::Hide nor Test::Without::Module available\n";
@@ -100,7 +100,8 @@ EOD
 }
 
 sub ACTION_authortest {
-    my ( $self, @args ) = @_;
+##  my ( $self, @args ) = @_;
+    my ( $self ) = @_;		# Arguments unused
 
     local $ENV{AUTHOR_TESTING} = 1;
 

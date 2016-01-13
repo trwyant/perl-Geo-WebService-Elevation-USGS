@@ -139,12 +139,16 @@ my $using_time_hires;
 
     $mark = _time();
     sub _pause {
-	my ( $self ) = @_;
+##	my ( $self ) = @_;	# Invocant unused
 	my $now = _time();
 	while ( $now < $mark ) {
 	    _sleep( $mark - $now );
 	    $now = _time();
 	}
+	# We use __PACKAGE__ rather than $self because the attribute is
+	# static, and it needs to be static because it needs to apply to
+	# everything coming from this user, not just everything coming
+	# from the invoking object.
 	$mark = $now + __PACKAGE__->get( 'throttle' );
 	return;
     }
