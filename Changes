@@ -1,3 +1,6 @@
+0.105		2016-01-16	T. R. Wyant
+  Clean up unused variables in subroutine arguments.
+
 0.104_01	2016-01-09	T. R. Wyant
   Further deprecate getElevation(), getAllElevations(), and related
     attributes. These now cause a warning on every use.
