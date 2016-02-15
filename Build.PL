@@ -23,6 +23,7 @@ my %args = (
     ),
     add_to_cleanup => [ qw{ xt/optionals } ],
     license => 'perl',
+    add_to_cleanup	=> [ qw{ cover_db } ],
 );
 
 $mbv >= 0.28
@@ -36,3 +37,5 @@ $mbv >= 0.34
 my $bldr = My::Module::Build->new (%args);
 
 $bldr->create_build_script ();
+
+# ex: set textwidth=72 :
