@@ -1,48 +1,45 @@
+0.106		2016-03-24	T. R. Wyant
+  Track change in reported elevation of test point.
+
+  Add Makefile targets authortest and testcover.
+
 0.105		2016-01-16	T. R. Wyant
   Clean up unused variables in subroutine arguments.
 
-0.104_01	2016-01-09	T. R. Wyant
   Further deprecate getElevation(), getAllElevations(), and related
     attributes. These now cause a warning on every use.
 
   Add GitHub repository to metadata.
 
 0.103		2015-10-09	T. R. Wyant
-  No changes since 0.102.01.
-
-0.102_01	2015-10-02	T. R. Wyant
   Track change in data set name retrieved by test.
 
 0.102		2015-06-29	T. R. Wyant
-  No changes since 0.101_02.
-
-0.101_02	2015-06-22	T. R. Wyant
   Further deprecate getElevation() and friends.
     A warning will now be generated on the first call to getElevation()
     and getAllElevations(), and the first access (or modification) of
     attributes 'default_ns', 'proxy', 'source', and 'use_all_limit'.
 
-0.101_01	2015-06-22	T. R. Wyant
   Change name of server providing service from ned.usgs.gov to
     nationalmap.gov.
 
 0.101		2014-08-02	T. R. Wyant
-  No changes since 0.100_02.
-
-0.100_02	2014-07-27	T. R. Wyant
   Remove bogus use of XML::Parser.
+
   Install deprecation logic.
+
   Test with 'compatible' set false.
 
-0.100_01	2014-07-26	T. R. Wyant
   Convert to use the NED server at http://ned.usgs.gov. This provides no
     data set selection, and only a single elevation point, so there has
     been extensive rewriting.
+
   A 'compatible' attribute (true by default) has been added to control
     the presentation of output. If true, returned results are modified
     to be as close as feasible to the data returned from the old GISDATA
     server, but user-visible differences remain. If false, the data
     returned represent the NED server data more closely and naturally.
+
   All methods and attributes specific to the old GISDATA server are
     deprecated. See the NOTICE section of the POD for the gory details.
 
@@ -63,7 +60,6 @@
     threatened in the 0.007_01 release. All interaction with the USGS
     web site now uses HTTP Post.
 
-0.007_01	2011-06-29	T. R. Wyant
   Add the ability to use an HTTP Post request as a transport instead of
     SOAP. The transport used is selected by the 'transport' attribute,
     which defaults to 'HTTP_Post'. My current intent is to drop SOAP
@@ -80,94 +76,105 @@
     UNIVERSAL::isa().
 
 0.006		2010-06-30	T. R. Wyant
-  Croak if $THROTTLE is set. The short deprecation cycle is because
-    $THROTTLE was introduced in a development version.
   Update tests that made use of non-US data sets, since the USGS has
     apparently taken them all down.
 
-0.005_03	2010-06-27	T. R. Wyant
-  Remove commented-out code, rewrite regexp for clarity.
-  Consolidate dependencies into inc/.../Meta.pm
   Add MIN_PERL_VERSION to Makefile.PM
 
-0.005_02	2010-06-18	T. R. Wyant
-  Recode throttle code to simplify, and fix bug that was causing
-    throttling not to take place on every other query.
-  Deprecate the $THROTTLE interface to the throttle mechanism, replacing
-    it with static attribute 'throttle'.
   Test the throttle mechanism, and make it actually work under test
     conditions.
 
-0.005_01	2010-06-14	T. R. Wyant
   Add authortest tests to run the normal tests without the optional
     modules.
+
   Add $valid argument to Geo::WebService::Elevation::USGS
     getAllElevations(), with same effect as in elevation().
+
   Add and test retry logic, controlled by attributes retry (which
     specifies the number of retries, defaulting to 0) and retry_hook
     (which specifies what to do before each retry, defaulting to sub
     {}). If carp is true, you get a carp on each error, but if croak is
     true it only croaks after retries are used up.
-  Add $Geo::WebService::Elevation::USGS::THROTTLE, which, if set to a
-    positive number, limits the rate at which this package issues
-    queries, regardless of what object issues them.
+
   Get rid of the '; charset=utf-8' in the Content-type header.
+
   Have Geo::WebService::Elevation::USGS only generate a new SOAP::Lite
     when needed. Cache it, and flush the cache when relevant attributes
     change.
+
   Convert to CPAN-recommended license and copyright notice.
+
   Update README installation instructions to something much more modern
     than just expanding the tarball.
+
   Move author-only tests to the xt/ directory, and ditch environment
     variable machinery. inc/Geo/WebService/Elevation/USGS/Build.pm
     supplies the authortest target, which does not work under
     Module::Build.
+
   Do not require Module::Build for configuration, since you can always
-    use Module::Build.
+    use ExtUtils::MakeMaker.
+
   Include bugtracker key in META.yml resources
 
 0.005		2009-05-12	T. R. Wyant
   Restructure Geo::WebService::Elevation::USGS
     Data_ID-to-Data_Source code.
+
   Tweak Geo::WebService::Elevation::USGS docs.
+
   Specifically require Scalar::Util 1.10, since we use
     looks_like_number().
+
   Use NED.AK_NED for 'bad extent' testing in t/elev.t, since
     SRTM.C_SA_3 is AWOL.
+
   Use only core Perl::Critic modules in t/critic.t.
 
 0.004		2009-01-04	T. R. Wyant
   Modify BAD_EXTENT result synthesis in getElevation(), since
     the USGS changed the error that is generated when this
     happens, and since they now return mixed-case {Data_ID}.
+
   Modify elevation() functionality to properly compare array
     and hash source IDs to the returned {Data_ID} when the
     data are picked out of the results of getAllElevations().
+
   Document that the elevations returned are referred to
     NAVD88 (except Alaska, which is NAVD29).
+
   Make t/elev.t more robust in the face of various server
     errors.
+
   Bring distributed code up to perlcritic --stern with
     exceptions.
+
   Distribute t/critic.t and t/perlcriticrc
+
   Use Params::Util::__INSTANCE rather than eval{isa}. This
     adds a dependency on Params::Util 0.11.
 
 0.003		2008-12-19	T. R. Wyant
-  _Really_ recode Makefile.PL per above.
   Correct failure in t/pod.t when Test::Pod not available.
+
   Skip tests in t/elev.t when query returns a 5xx error.
+
   Try to pick up data from ActivePerl test failure.
 
 0.002		2008-12-15	T. R. Wyant
   Make is_valid() croak if not passed a scalar or hash ref.
+
   Require Test::More 0.40 (rather than 0) and recode tests
     to conform to this.
+
   Log all net errors encountered during tests, to try to
     diagnose test failures.
+
   Recode Build.PL to configure the use of Module::Build to
     the version present.
+
   Recode Makefile.PL in a manner corresponding to Build.PL.
+
   Add t/executable.t and t/manifest.t to the distribution.
 
 0.001		2008-12-09	T. R. Wyant
