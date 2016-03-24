@@ -45,10 +45,12 @@ my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(
 my $ele_dataset = '3DEP 1/3 arc-second';	# Expected data set
 my $ele_re = qr{ \A Elev_DC }smx;	# Regexp for data set
 #x# my $ele_ft = '57.03';	# expected elevation in feet.
-my $ele_ft = '56.95';	# expected elevation in feet.
+#x# my $ele_ft = '56.95';	# expected elevation in feet.
+my $ele_ft = '56.53';	# expected elevation in feet.
 my @ele_loc = ( 38.898748, -77.037684 );	# Lat/Lon to get elevation for
 #x# my $ele_mt = '17.38';	# Expected elevation in meters.
-my $ele_mt = '17.36';	# Expected elevation in meters.
+#x# my $ele_mt = '17.36';	# Expected elevation in meters.
+my $ele_mt = '17.23';	# Expected elevation in meters.
 
 my $rslt;
 
