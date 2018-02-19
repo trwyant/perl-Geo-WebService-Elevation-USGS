@@ -122,6 +122,11 @@ our $VERSION = '0.106';
 use constant BEST_DATA_SET => -1;
 use constant USGS_URL => 'http://nationalmap.gov/epqs/pqs.php';
 
+use constant ARRAY_REF	=> ref [];
+use constant CODE_REF	=> ref sub {};
+use constant HASH_REF	=> ref {};
+use constant REGEXP_REF	=> ref qr{};
+
 my $using_time_hires;
 {
     my $mark;
@@ -359,7 +364,7 @@ or a hash whose {Elevation} key supplies the elevation value.
 sub is_valid {
     my $ele = pop;
     my $ref = ref $ele;
-    if ($ref eq 'HASH') {
+    if ( HASH_REF eq $ref ) {
 	$ele = $ele->{Elevation};
     } elsif ($ref) {
 	croak "$ref reference not understood";
@@ -407,7 +412,7 @@ result in an exception being thrown.
 
 sub _set_hook {
     my ( $self, $name, $val ) = @_;
-    ref $val eq 'CODE'
+    CODE_REF eq ref $val
 	or croak "Attribute $name must be a code reference";
     return( $self->{$name} = $val );
 }
@@ -431,7 +436,9 @@ sub _set_literal {
 }
 
 {
-    my %supported = map {$_ => 1} qw{ARRAY CODE HASH Regexp};
+    my %supported = map { $_ => 1 } ARRAY_REF, CODE_REF, HASH_REF,
+	REGEXP_REF;
+
     sub _set_source {
 	my ($self, $name, $val) = @_;
 	my $ref = ref $val;
@@ -691,7 +698,7 @@ sub _request {
 
     my $rslt = exists $self->{_hack_result} ? do {
 	my $data = delete $self->{_hack_result};
-	'CODE' eq ref $data ? $data->( $self, %arg ) : $data;
+	CODE_REF eq ref $data ? $data->( $self, %arg ) : $data;
     } : $ua->request( $rqst );
 
     $self->{trace}
@@ -708,7 +715,7 @@ sub _request {
     foreach my $key (
 	qw{ USGS_Elevation_Point_Query_Service Elevation_Query }
     ) {
-	'HASH' eq ref $rslt
+	HASH_REF eq ref $rslt
 	    and exists $rslt->{$key}
 	    or return $self->_error(
 	    "Elevation result is missing element {$key}" );
