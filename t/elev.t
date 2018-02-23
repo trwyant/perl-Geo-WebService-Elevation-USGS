@@ -80,7 +80,7 @@ SKIP: {
     _skip_on_server_error($ele, 7);
     ok(!$@, 'elevation() succeeded')
 	or _skip_tests( 4 );
-    # Note that prior to version [%% next_version %%] the default for
+    # Note that prior to version 0.106_01 the default for
     # the 'compatibility' attribute was true, which caused an array to
     # be returned.
     is( ref $rslt, 'HASH', 'elevation() returned a hash' );
@@ -99,7 +99,7 @@ SKIP: {
     _skip_on_server_error($ele, 7);
     ok(!$@, 'elevation() still succeeds')
 	or _skip_tests( 4 );
-    # Note that prior to version [%% next_version %%] the default for
+    # Note that prior to version 0.106_01 the default for
     # the 'compatibility' attribute was true, which caused an array to
     # be returned.
     is( ref $rslt, 'HASH', 'elevation() still returns a hash');
@@ -118,7 +118,7 @@ SKIP: {
     _skip_on_server_error($ele, 7);
     ok(!$@, 'elevation() with hash source still succeeds')
 	or _skip_tests( 7 );
-    # Note that prior to version [%% next_version %%] the default for
+    # Note that prior to version 0.106_01 the default for
     # the 'compatibility' attribute was true, which caused an array to
     # be returned.
     is( ref $rslt, 'HASH',
@@ -139,7 +139,7 @@ SKIP: {
     _skip_on_server_error($ele, 7);
     ok(!$@, 'elevation() still succeeds')
 	or _skip_tests( 7 );
-    # Note that prior to version [%% next_version %%] the default for
+    # Note that prior to version 0.106_01 the default for
     # the 'compatibility' attribute was true, which caused an array to
     # be returned.
     is( ref $rslt, 'HASH', 'elevation() still returns a hash' );
@@ -164,7 +164,7 @@ SKIP: {
     _skip_on_server_error($ele, 7);
     ok(!$@, 'elevation() done by iteration succeeds')
 	or _skip_tests( 4 );
-    # Note that prior to version [%% next_version %%] the default for
+    # Note that prior to version 0.106_01 the default for
     # the 'compatibility' attribute was true, which caused an array to
     # be returned.
     is( ref $rslt, 'HASH', 'elevation() still returns a hash' );
@@ -180,7 +180,7 @@ SKIP: {
     _skip_on_server_error($ele, 7);
     ok(!$@, 'elevation(valid) succeeds')
 	or _skip_tests( 4 );
-    # Note that prior to version [%% next_version %%] the default for
+    # Note that prior to version 0.106_01 the default for
     # the 'compatibility' attribute was true, which caused an array to
     # be returned.
     is( ref $rslt, 'HASH', 'elevation(valid) still returns a hash' );
@@ -246,7 +246,7 @@ SKIP: {
 	ok(!$@, 'elevation succeeded using code ref as source')
 	    or _skip_tests( 2 );
 	ok($rslt, 'Got a result when using code ref as source');
-	# Note that prior to version [%% next_version %%] the default
+	# Note that prior to version 0.106_01 the default
 	# for the 'compatibility' attribute was true, which caused an
 	# array to be returned.
 	is( ref $rslt, 'HASH', 'Got hash ref when using code ref as source' );
@@ -534,7 +534,7 @@ SKIP: {
     _skip_on_server_error($ele, 7);
     ok(!$@, 'elevation(Geo::Point) succeeded')
 	or _skip_tests( 4 );
-    # Note that prior to version [%% next_version %%] the default for
+    # Note that prior to version 0.106_01 the default for
     # the 'compatibility' attribute was true, which caused an array to
     # be returned.
     is( ref $rslt, 'HASH',
@@ -551,7 +551,7 @@ SKIP: {
     _skip_on_server_error($ele, 2);
     ok(!$@, 'elevation(Geo::Point) via getElevation succeeded')
 	or _skip_tests( 2 );
-    # Note that prior to version [%% next_version %%] the default for
+    # Note that prior to version 0.106_01 the default for
     # the 'compatibility' attribute was true, which caused an array to
     # be returned.
     is( ref $rslt, 'HASH',
@@ -577,7 +577,7 @@ SKIP: {
     _skip_on_server_error($ele, 7);
     ok(!$@, "elevation($kind) via getAllElevations succeeded")
 	or _skip_tests( 7 );
-    # Note that prior to version [%% next_version %%] the default for
+    # Note that prior to version 0.106_01 the default for
     # the 'compatibility' attribute was true, which caused an array to
     # be returned.
     is( ref $rslt, 'HASH', "elevation($kind) returns a hash");

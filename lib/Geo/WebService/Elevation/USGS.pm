@@ -13,7 +13,7 @@ Geo::WebService::Elevation::USGS - Elevation queries against USGS web services.
 
 =head1 NOTICE
 
-B<< Version [%% next_version %%] changes the default value of the
+B<< Version 0.106_01 changes the default value of the
 C<'compatible'> attribute to C<0> (i.e. false). >>
 
 The GIS data web service this module was originally based on has gone
@@ -68,7 +68,7 @@ In the meantime you can suppress the warnings with
  no warnings qw{ deprecated };
 
 The C<compatible> attribute is deprecated as of release 0.104_01. As of
-release [%% next_version %%] it will warn when set true. In the first
+release 0.106_01 it will warn when set true. In the first
 release after September 1 2018 it will warn on any use. Six months after
 that, it will become a fatal error to use it.
 
@@ -123,7 +123,7 @@ use JSON;
 use LWP::UserAgent;
 use Scalar::Util 1.10 qw{ blessed looks_like_number };
 
-our $VERSION = '0.106';
+our $VERSION = '0.106_01';
 
 use constant BEST_DATA_SET => -1;
 use constant USGS_URL => 'http://nationalmap.gov/epqs/pqs.php';
@@ -271,7 +271,7 @@ attribute is true:
 * If called in scalar context the return will be a reference to an array
 whose single element is the results hash.
 
-B<Note> that as of version [%% next_version %%], the default for this
+B<Note> that as of version 0.106_01, the default for this
 attribute is B<false>.
 
 You can also pass a C<Geo::Point>, C<GPS::Point>, or C<Net::GPSD::Point>
@@ -776,7 +776,7 @@ This boolean attribute determines whether this object attempts to make
 returned data consistent with the old GIS server.
 
 The default was C<1> (i.e. true) when it was introduced in version
-0.100, but as of version [%% next_version %%], and per the deprecation
+0.100, but as of version 0.106_01, and per the deprecation
 plan, it is C<0> (i.e. false). Like the other deprecated attributes any
 use of it will eventually become fatal. See the L<NOTICE|/NOTICE> above
 for details.
