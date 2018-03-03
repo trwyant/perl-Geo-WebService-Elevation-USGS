@@ -1,4 +1,4 @@
-0.106_01	2018-02-23	T. R. Wyant
+0.107		2018-03-03	T. R. Wyant
     Default 'compatible' attribute to 0 (false).
 
     Use manifest constants for reference names.
