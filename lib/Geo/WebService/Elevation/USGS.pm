@@ -378,7 +378,7 @@ sub is_valid {
     } elsif ($ref) {
 	croak "$ref reference not understood";
     }
-    return looks_like_number($ele) && $ele > -1e+300;
+    return defined( $ele ) && looks_like_number($ele) && $ele > -1e+300;
 }
 
 =head3 $eq = $eq->set($attribute => $value ...);
