@@ -1,3 +1,6 @@
+0.107_02	2018-03-15	T. R. Wyant
+    Use manifest constants for built-in ref types.
+
 0.107_01	2018-03-04	T. R. Wyant
     Guard against undef in method is_valid().
 
