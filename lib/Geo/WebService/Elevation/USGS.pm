@@ -13,8 +13,9 @@ Geo::WebService::Elevation::USGS - Elevation queries against USGS web services.
 
 =head1 NOTICE
 
-B<< Version 0.106_01 changes the default value of the
-C<'compatible'> attribute to C<0> (i.e. false). >>
+Version 0.106_01 changes the default value of the C<'compatible'>
+attribute to C<0> (i.e. false). With version [%% next_version %%], the
+first attempt to modify this attribute will warn.
 
 The GIS data web service this module was originally based on has gone
 the way of the dodo. This release uses the NED service, which is similar
@@ -488,10 +489,14 @@ sub _set_unsigned_integer {
 #	The author reserves the right to change these without notice.
 
 {
+    # NOTE to me: The deprecation of everything but 'compatible' is on
+    # hold until 'compatible' gets to 2. Then everything goes to 3
+    # together.
     my %dep = (
 	attribute	=> {
 	    dflt	=> sub { return },
 	    item	=> {
+		compatible	=> 1,
 		default_ns	=> 2,
 		proxy		=> 2,
 		source		=> 2,
