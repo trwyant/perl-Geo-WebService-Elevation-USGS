@@ -14,7 +14,7 @@ Geo::WebService::Elevation::USGS - Elevation queries against USGS web services.
 =head1 NOTICE
 
 Version 0.106_01 changes the default value of the C<'compatible'>
-attribute to C<0> (i.e. false). With version [%% next_version %%], the
+attribute to C<0> (i.e. false). With version 0.108_01, the
 first attempt to modify this attribute will warn.
 
 The GIS data web service this module was originally based on has gone
@@ -124,7 +124,7 @@ use JSON;
 use LWP::UserAgent;
 use Scalar::Util 1.10 qw{ blessed looks_like_number };
 
-our $VERSION = '0.108';
+our $VERSION = '0.108_01';
 
 use constant BEST_DATA_SET => -1;
 use constant USGS_URL => 'http://nationalmap.gov/epqs/pqs.php';
