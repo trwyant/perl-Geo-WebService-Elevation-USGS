@@ -127,7 +127,7 @@ use Scalar::Util 1.10 qw{ blessed looks_like_number };
 our $VERSION = '0.109';
 
 use constant BEST_DATA_SET => -1;
-use constant USGS_URL => 'http://nationalmap.gov/epqs/pqs.php';
+use constant USGS_URL => 'http://ned.usgs.gov/epqs/pqs.php';
 
 use constant ARRAY_REF	=> ref [];
 use constant CODE_REF	=> ref sub {};
@@ -194,6 +194,7 @@ sub new {
 	timeout	=> 30,
 	trace	=> undef,
 	units	=> 'FEET',
+	usgs_url	=> $ENV{GEO_WEBSERVICE_ELEVATION_USGS_URL} || USGS_URL,
 	use_all_limit => 5,
     };
     bless $self, $class;
@@ -216,6 +217,7 @@ my %mutator = (
     timeout	=> \&_set_integer_or_undef,
     trace	=> \&_set_literal,
     units	=> \&_set_literal,
+    usgs_url	=> \&_set_literal,
     use_all_limit => \&_set_integer,
 );
 
@@ -703,7 +705,7 @@ sub _request {
 	: 'Feet';
     $arg{output}	= 'json';
 
-    my $uri = URI->new( USGS_URL );
+    my $uri = URI->new( $self->get( 'usgs_url' ) );
     $uri->query_form( \%arg );
     my $rqst = HTTP::Request::Common::GET( $uri );
 
@@ -959,6 +961,16 @@ getElevation() to be used whenever the 'source' array or hash has any
 entries at all, no matter how many it has.
 
 The default is 5, which was chosen based on timings of the two methods.
+
+=head3 usgs_url
+
+This attribute specifies the URL to query. Under normal circumstances
+you will not need to change this, but maybe it can get you going again
+if the USGS moves the service.
+
+The default is the value of environment variable 
+C<GEO_WEBSERVICE_ELEVATION_USGS_URL>. If that is undefined, the default
+is C<http://ned.usgs.gov/epqs/pqs.php>.
 
 =head1 ACKNOWLEDGMENTS
 
