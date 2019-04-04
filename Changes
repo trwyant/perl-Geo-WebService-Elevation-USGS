@@ -1,3 +1,6 @@
+0.110_01	2019-04-04	T. R. Wyant
+    The 'compatible' attribute now warns on all accesses.
+
 0.110		2018-09-29	T. R. Wyant
     Track change in service URL.
 

@@ -16,7 +16,7 @@ Geo::WebService::Elevation::USGS - Elevation queries against USGS web services.
 Version 0.106_01 changes the default value of the C<'compatible'>
 attribute to C<0> (i.e. false). With version 0.108_01, the
 first attempt to modify this attribute will warn. With version
-[%% next_version %%], all attempts to modify this attribute will warn,
+0.110_01, all attempts to modify this attribute will warn,
 and six months after the release of this version, any attempt to modify
 it will become fatal.
 
@@ -127,7 +127,7 @@ use JSON;
 use LWP::UserAgent;
 use Scalar::Util 1.10 qw{ blessed looks_like_number };
 
-our $VERSION = '0.110';
+our $VERSION = '0.110_01';
 
 use constant BEST_DATA_SET => -1;
 use constant USGS_URL => 'http://ned.usgs.gov/epqs/pqs.php';
