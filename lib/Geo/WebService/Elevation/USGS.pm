@@ -15,7 +15,10 @@ Geo::WebService::Elevation::USGS - Elevation queries against USGS web services.
 
 Version 0.106_01 changes the default value of the C<'compatible'>
 attribute to C<0> (i.e. false). With version 0.108_01, the
-first attempt to modify this attribute will warn.
+first attempt to modify this attribute will warn. With version
+[%% next_version %%], all attempts to modify this attribute will warn,
+and six months after the release of this version, any attempt to modify
+it will become fatal.
 
 The GIS data web service this module was originally based on has gone
 the way of the dodo. This release uses the NED service, which is similar
@@ -70,7 +73,7 @@ In the meantime you can suppress the warnings with
 
 The C<compatible> attribute is deprecated as of release 0.104_01. As of
 release 0.106_01 it will warn when set true. In the first
-release after September 1 2018 it will warn on any use. Six months after
+release after March 1 2019 it will warn on any use. Six months after
 that, it will become a fatal error to use it.
 
 =head1 DESCRIPTION
@@ -498,7 +501,7 @@ sub _set_unsigned_integer {
 	attribute	=> {
 	    dflt	=> sub { return },
 	    item	=> {
-		compatible	=> 1,
+		compatible	=> 2,
 		default_ns	=> 2,
 		proxy		=> 2,
 		source		=> 2,
