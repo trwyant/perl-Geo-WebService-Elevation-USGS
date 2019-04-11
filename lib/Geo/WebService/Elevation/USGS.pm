@@ -892,7 +892,7 @@ The default is the null subroutine, i.e. C<sub {}>.
 
 =head3 source
 
-This attribute is deprecated. See the L<NOTICE|/NOtICE> above for the
+This attribute is deprecated. See the L</NOTICE> above for the
 deprecation schedule.
 
 This attribute specifies the ID of the source layer to be queried by
