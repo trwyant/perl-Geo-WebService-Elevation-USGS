@@ -65,7 +65,7 @@ months, but that fell in the cracks, and when I revisited it I thought
 the change in the default value of the C<'compatible'> attribute (to
 false, see below) was disruptive enough that I would make it a release
 by itself. The current plan is to delay making the deprecated methods
-fatal the C<compatible> attribute becomes fatal.
+fatal until the C<compatible> attribute becomes fatal.
 
 In the meantime you can suppress the warnings with
 
