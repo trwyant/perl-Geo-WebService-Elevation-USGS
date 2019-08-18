@@ -720,8 +720,12 @@ sub _request {
 	CODE_REF eq ref $data ? $data->( $self, %arg ) : $data;
     } : $ua->request( $rqst );
 
-    $self->{trace}
-	and print STDERR $rslt->as_string();
+    if ( $self->{trace} ) {
+	if ( my $redir = $rslt->request() ) {
+	    print STDERR $redir->as_string();
+	}
+	print STDERR $rslt->as_string();
+    }
 
     $rslt->is_success()
 	or croak $rslt->status_line();
@@ -1001,7 +1005,9 @@ if the USGS moves the service.
 
 The default is the value of environment variable 
 C<GEO_WEBSERVICE_ELEVATION_USGS_URL>. If that is undefined, the default
-is C<http://ned.usgs.gov/epqs/pqs.php>.
+is C<http://ned.usgs.gov/epqs/pqs.php>. B<Note> that without query
+parameters this URL does nothing useful. See
+L<https://ned.usgs.gov/epqs/> for details.
 
 =head1 ACKNOWLEDGMENTS
 
