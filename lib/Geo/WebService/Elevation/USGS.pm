@@ -130,7 +130,7 @@ use Scalar::Util 1.10 qw{ blessed looks_like_number };
 our $VERSION = '0.113';
 
 use constant BEST_DATA_SET => -1;
-use constant USGS_URL => 'http://ned.usgs.gov/epqs/pqs.php';
+use constant USGS_URL => 'https://ned.usgs.gov/epqs/pqs.php';
 
 use constant ARRAY_REF	=> ref [];
 use constant CODE_REF	=> ref sub {};
@@ -1005,7 +1005,7 @@ if the USGS moves the service.
 
 The default is the value of environment variable 
 C<GEO_WEBSERVICE_ELEVATION_USGS_URL>. If that is undefined, the default
-is C<http://ned.usgs.gov/epqs/pqs.php>. B<Note> that without query
+is C<https://ned.usgs.gov/epqs/pqs.php>. B<Note> that without query
 parameters this URL does nothing useful. See
 L<https://ned.usgs.gov/epqs/> for details.
 
