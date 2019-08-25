@@ -1,4 +1,4 @@
-0.113_01	2019-08-18	T. R. Wyant
+0.114		2019-08-25	T. R. Wyant
     Make USGS URL https:, save a redirect.
 
     Clarify POD re http://ned.usgs.gov/epqs/pqs.php
