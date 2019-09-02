@@ -1,4 +1,4 @@
-0.114_01	2019-08-26	T. R. Wyant
+0.115		2019-09-02	T. R. Wyant
     Change default usgs_url to https://nationalmap.gov/epqs/pqs.php
     since that is what is documented at
     https://www.usgs.gov/core-science-systems/ngp/3dep/about-3dep-products-services
