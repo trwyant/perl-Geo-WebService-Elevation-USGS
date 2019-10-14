@@ -1,4 +1,4 @@
-0.115_01	2019-10-06	T. R. Wyant
+0.116		2019-10-14	T. R. Wyant
     All the functionality based on the old GIS web site that this module was
     originally based on now results in a fatal error. This includes not only
     getElevation() and getAllElevations(), but any attributes that support
