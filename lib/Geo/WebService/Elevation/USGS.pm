@@ -35,14 +35,14 @@ an error by an undef response, with the error retrievable from the
 'error' attribute.
 
 For documentation on the underlying web service, see
-L<http://nationalmap.gov>.
+L<https://nationalmap.gov>.
 
 For all methods, the input latitude and longitude are documented at the
 above web site as being WGS84, which for practical purposes I understand
 to be equivalent to NAD83. The vertical reference is not documented
 under the above link, but correspondence with the USGS says that it is
 derived from the National Elevation Dataset (NED; see
-L<http://nationalmap.gov>). This is referred to NAD83 (horizontal) and
+L<https://nationalmap.gov>). This is referred to NAD83 (horizontal) and
 NAVD88 (vertical). NAVD88 is based on geodetic leveling surveys, B<not
 the WGS84/NAD83 ellipsoid,> and takes as its zero datum sea level at
 Father Point/Rimouski, in Quebec, Canada. Alaska is an exception, and is
@@ -51,7 +51,7 @@ based on NAD27 (horizontal) and NAVD29 (vertical).
 Anyone interested in the gory details may find the paper I<Converting
 GPS Height into NAVD88 Elevation with the GEOID96 Geoid Height Model> by
 Dennis G. Milbert, Ph.D. and Dru A. Smith, Ph.D helpful. This is
-available at L<http://www.ngs.noaa.gov/PUBS_LIB/gislis96.html>. This
+available at L<https://www.ngs.noaa.gov/PUBS_LIB/gislis96.html>. This
 paper states that the difference between ellipsoid and geoid heights
 ranges between -75 and +100 meters globally, and between -53 and -8
 meters in "the conterminous United States."
@@ -909,7 +909,7 @@ problem in my first module to rely heavily on Test::More.
 =head1 BUGS
 
 Bugs can be reported to the author by mail, or through
-L<http://rt.cpan.org/>.
+L<https://rt.cpan.org/>.
 
 =head1 SEE ALSO
 
