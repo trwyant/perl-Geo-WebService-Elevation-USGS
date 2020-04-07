@@ -10,7 +10,7 @@ use Carp;
 use File::Spec;
 
 my @optionals_dir = qw{ xt author optionals };
-my @hide = qw{ LWP::Protocol::https SOAP::Lite Time::HiRes };
+my @hide = qw{ Time::HiRes };
 
 {
     my $done;

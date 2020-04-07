@@ -53,6 +53,7 @@ sub requires {
 	'Carp'			=> 0,
 	'HTTP::Request::Common'	=> 0,
 	'JSON'			=> 0,
+	'LWP::Protocol::https'	=> 0,
 	'LWP::UserAgent'	=> 0,
 	'Scalar::Util'		=> 1.10,
 	'strict'		=> 0,
