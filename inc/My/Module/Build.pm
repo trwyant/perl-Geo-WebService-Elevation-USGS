@@ -118,6 +118,17 @@ sub ACTION_authortest {
     return;
 }
 
+sub ACTION_test {
+    my ( $self, @args ) = @_;
+
+    -e 'META.json'
+	or $self->depends_on( 'distmeta' );
+
+    $self->depends_on( 'build' );
+
+    return $self->SUPER::ACTION_test( @args );
+}
+
 1;
 
 __END__
