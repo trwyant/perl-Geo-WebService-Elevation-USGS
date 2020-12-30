@@ -811,7 +811,7 @@ problem in my first module to rely heavily on Test::More.
 =head1 BUGS
 
 Bugs can be reported to the author by mail, or through
-L<https://rt.cpan.org/>.
+L<https://github.com/trwyant/perl-Geo-WebService-Elevation-USGS/issues/>.
 
 =head1 SEE ALSO
 
