@@ -62,7 +62,6 @@ sub _get_tests_without_optional_modules {
     }
 }
 
-
 sub ACTION_make_optional_modules_tests {
 ##  my ( $self, @args ) = @_;		# Arguments unused
 
@@ -191,8 +190,9 @@ C<authortest> action depends on it.
 =head1 SUPPORT
 
 Support is by the author. Please file bug reports at
-L<https://github.com/trwyant/perl-Geo-WebService-Elevation-USGS/issues>,
-or in electronic mail to the author.
+L<https://rt.cpan.org/Public/Dist/Display.html?Name=Geo-WebService-Elevation-USGS>,
+L<https://github.com/trwyant/perl-Geo-WebService-Elevation-USGS/issues>, or in
+electronic mail to the author.
 
 =head1 AUTHOR
 
