@@ -9,123 +9,106 @@ our @ISA = qw{ Module::Build };
 use Carp;
 use File::Spec;
 
-my @optionals_dir = qw{ xt author optionals };
-my @hide = qw{ Time::HiRes };
-
-{
-    my $done;
-    my $hider;
-
-    sub _get_hider {
-	$done and return $hider;
-	$done = 1;
-	foreach my $module ( qw{
-		Test::Without::Module
-		Devel::Hide
-	    } ) {
-	    eval "require $module; 1"
-		and return ( $hider = $module );
-	}
-	return $hider;
-    }
-}
-
-sub _get_tests_without_optional_modules {
-    my @args = @_;
-    _get_hider() or return;
-    my @cleanup;
-    @args or @args = _get_general_tests();
-    foreach my $path ( @args ) {
-	push @cleanup, File::Spec->catfile( @optionals_dir,
-	    ( File::Spec->splitpath( $path ) )[2] );
-    }
-    return @cleanup;
-}
-
-{
-
-    my @general_tests;
-
-    sub _get_general_tests {
-	@general_tests and return @general_tests;
-	my $th;
-	opendir $th, 't'
-	    or die "Unable to open directory t: $!\n";
-	while ( defined( my $fn = readdir $th ) ) {
-	    '.' eq substr $fn, 0, 1 and next;
-	    my $path = File::Spec->catfile( 't', $fn );
-	    -f $path or next;
-	    push @general_tests, $path;
-	}
-	closedir $th;
-	return @general_tests;
-    }
-}
-
-sub ACTION_make_optional_modules_tests {
-##  my ( $self, @args ) = @_;		# Arguments unused
-
-    my $hider = _get_hider() or do {
-#	warn "Neither Devel::Hide nor Test::Without::Module available\n";
-	return;
-    };
-
-    my $gendir = File::Spec->catdir( @optionals_dir );
-
-    -d $gendir
-	or mkdir $gendir
-	or die "Unable to create $gendir: $!\n";
-
-    foreach my $ip ( _get_general_tests() ) {
-	my ( $op ) = _get_tests_without_optional_modules( $ip );
-	-f $op and next;
-###	local $/ = undef;
-###	open my $ih, '<', $ip or die "Unable to open $ip: $!\n";
-###	my $content = <$ih>;
-###	close $ih;
-	print "Creating $op\n";
-	open my $oh, '>', $op or die "Unable to open $op: $!\n";
-	print { $oh } <<EOD;
-package main;
-
-use strict;
-use warnings;
-
-use $hider qw{ @hide };
-
-require '$ip';
-EOD
-	close $oh;
-    }
-}
+# use lib 'inc';	# Already done because this module is running.
+use My::Module::Meta;
 
 sub ACTION_authortest {
-##  my ( $self, @args ) = @_;
-    my ( $self ) = @_;		# Arguments unused
+##  my ( $self, @args ) = @_;	# Arguments unused
+    my ( $self ) = @_;
 
-    local $ENV{AUTHOR_TESTING} = 1;
-
-    my @depends_on = ( qw{ build make_optional_modules_tests } );
-    -e 'META.yml' or push @depends_on, 'distmeta';
-    $self->depends_on( @depends_on );
-    my @test_files = qw{ t xt/author };
-    my $optdir = File::Spec->catdir( @optionals_dir );
-    -d $optdir and push @test_files, $optdir;
-    $self->test_files( @test_files );
-    $self->depends_on( 'test' );
+    $self->depends_on( qw{ functional_test optionals_test structural_test } );
 
     return;
 }
 
-sub ACTION_test {
-    my ( $self, @args ) = @_;
+sub ACTION_functional_test {
+    my ( $self ) = @_;
 
+    local $ENV{AUTHOR_TESTING} = 1;
+
+    $self->my_depends_on();
+
+    print <<'EOD';
+
+functional_test
+AUTHOR_TESTING=1
+EOD
+
+    # Not depends_on(), because that is idempotent. But we really do
+    # want to run 'test' more than once if we do more than one of the
+    # *_test actions.
+    $self->dispatch( 'test' );
+
+    return;
+}
+
+sub ACTION_optionals_test {
+    my ( $self ) = @_;
+
+    my $optionals = join ',', My::Module::Meta->optional_modules();
+    local $ENV{AUTHOR_TESTING} = 1;
+    local $ENV{PERL5OPT} = "-MTest::Without::Module=$optionals";
+
+    $self->my_depends_on();
+
+    print <<"EOD";
+
+optionals_test
+AUTHOR_TESTING=1
+PERL5OPT=-MTest::Without::Module=$optionals
+EOD
+
+    # Not depends_on(), because that is idempotent. But we really do
+    # want to run 'test' more than once if we do more than one of the
+    # *_test actions.
+    $self->dispatch( 'test' );
+
+    return;
+}
+
+sub ACTION_structural_test {
+    my ( $self ) = @_;
+
+    local $ENV{AUTHOR_TESTING} = 1;
+
+    $self->my_depends_on();
+
+    print <<'EOD';
+
+structural_test
+AUTHOR_TESTING=1
+EOD
+
+    my $structural_test_files = 'xt/author';
+    if ( $self->can( 'args' ) ) {
+	my @arg = $self->args();
+	for ( my $inx = 0; $inx < $#arg; $inx += 2 ) {
+	    $arg[$inx] =~ m/ \A structural[-_]test[-_]files \z /smx
+		or next;
+	    $structural_test_files = $arg[ $inx + 1 ];
+	    last;
+	}
+    }
+    $self->test_files( $structural_test_files );
+
+    # Not depends_on(), because that is idempotent. But we really do
+    # want to run 'test' more than once if we do more than one of the
+    # *_test actions.
+    $self->dispatch( 'test' );
+
+    return;
+}
+
+sub my_depends_on {
+    my ( $self ) = @_;
+    my @depends_on;
+    -d 'blib'
+	or push @depends_on, 'build';
     -e 'META.json'
-	or $self->depends_on( 'distmeta' );
-
-    $self->depends_on( 'build' );
-
-    return $self->SUPER::ACTION_test( @args );
+	or push @depends_on, 'distmeta';
+    @depends_on
+	and $self->depends_on( @depends_on );
+    return;
 }
 
 1;

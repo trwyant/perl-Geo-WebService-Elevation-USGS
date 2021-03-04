@@ -88,6 +88,10 @@ sub no_index {
     };
 }
 
+sub optional_modules {
+    return ( qw{ Time::HiRes } );
+}
+
 sub provides {
     -d 'lib'
 	or return;
@@ -185,6 +189,12 @@ cleanup.
 
 This method returns the name of the distribution author
 
+=head2 build_requires
+
+This method computes and returns a reference to a hash describing the
+modules required to build the C<Geo::WebService::Elevation::USGS>
+package.
+
 =head2 configure_requires
 
  use YAML;
@@ -236,6 +246,10 @@ on.
 This method returns the names of things which are not to be indexed
 by CPAN.
 
+=head2 optional_modules
+
+This method returns the names of any optional modules.
+
 =head2 provides
 
  use YAML;
@@ -264,12 +278,6 @@ may be added.
  print 'This package requires Perl ', $meta->requires_perl(), "\n";
 
 This method returns the version of Perl required by the package.
-
-=head2 build_requires
-
-This method computes and returns a reference to a hash describing the
-modules required to build the C<Geo::WebService::Elevation::USGS>
-package.
 
 =head2 script_files
 
