@@ -129,11 +129,8 @@ My::Module::Build - Extend Module::Build for Geo::WebService::Elevation::USGS
 
 =head1 DESCRIPTION
 
-This extension of L<Module::Build|Module::Build> adds the following
-action to those provided by L<Module::Build|Module::Build>:
-
-  authortest
-  make_optional_modules_tests
+This extension of L<Module::Build|Module::Build> adds actions to those
+provided by L<Module::Build|Module::Build>.
 
 =head1 ACTIONS
 
@@ -143,30 +140,41 @@ This module provides the following actions:
 
 =item authortest
 
-This action runs not only those tests which appear in the F<t>
-directory, but those that appear in the F<xt> directory. The F<xt> tests
-are provided for information only, since some of them (notably
-F<xt/critic.t> and F<xt/pod_spelling.t>) are very sensitive to the
-configuration under which they run.
+This action does nothing on its own, but it depends on
+L<functional_test|/functional_test>, L<optionals_test|/optionals_test>,
+and L<structural_test|/structural_test>, so invoking it runs all these tests.
 
-Some of the F<xt> tests require modules that are not named as
-requirements. These should disable themselves if the required modules
-are not present.
+=item functional_test
 
-This test is sensitive to the C<verbose=1> argument, but not to the
-C<--test_files> argument.
+This action is the same as C<test>, but the C<AUTHORTEST> environment
+variable is set to true.
 
-=item make_optional_modules_tests
+This test is sensitive to both the C<verbose> argument and the
+C<test-files> argument.
 
-This action creates the tests in the F<xt/optionals> directory. These
-generally duplicate the tests in the F<t> directory, but the optional
-modules are made unavailable using either
-L<Test::Without::Module|Test::Without::Module> or
-L<Devel::Hide|Devel::Hide>, in that order. If neither of these modules
-is available, nothing is done.
+=item optionals_test
 
-There should be no need to invoke this action directly, since the
-C<authortest> action depends on it.
+This action is the same as C<test>, but the C<AUTHORTEST> environment
+variable is set to true, and the C<PERL5OPT> environment variable is set
+to C<-MTest::Without::Module=...>, where the elipsis is a
+comma-separated list of all optional modules.
+
+This test is sensitive to both the C<verbose> argument and the
+C<test-files> argument.
+
+=item structural_test
+
+This action is the same as C<test>, but the C<AUTHORTEST> environment
+variable is set to true, and the test files are F<xt/author>.
+
+Some of these tests require modules that are not named as requirements.
+Such tests should disable themselves if the required modules are not
+present.
+
+This test is sensitive to the C<verbose> argument and the
+C<structural-test-files> argument, which specifies test files to run and
+defaults to F<xt/author>. The use of C<structural-test-files> requires
+at least L<Module::Build|Module::Build> version C<0.26>.
 
 =back
 
