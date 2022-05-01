@@ -85,7 +85,9 @@ sub no_index {
 }
 
 sub optional_modules {
-    return ( qw{ Time::HiRes } );
+    # return ( qw{ Time::HiRes } );
+    # As of Test::Builder 1.302190 (March 2 2022) Time::HiRes is needed
+    return;
 }
 
 sub provides {
