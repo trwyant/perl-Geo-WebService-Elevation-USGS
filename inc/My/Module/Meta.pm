@@ -146,6 +146,7 @@ sub requires {
     return {
 	'Carp'			=> 0,
 	'HTTP::Request::Common'	=> 0,
+	'HTTP::Status'		=> 0,
 	'JSON'			=> 0,
 	'LWP::Protocol::https'	=> 0,
 	'LWP::UserAgent'	=> 0,
@@ -165,7 +166,6 @@ sub build_requires {
     return {
 	'Test::More'		=> 0.88,
 	'HTTP::Response'	=> 0,
-	'HTTP::Status'		=> 0,
     };
 }
 
