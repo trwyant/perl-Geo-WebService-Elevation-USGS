@@ -43,17 +43,8 @@ diag "Accessing @{[ $ele->get( 'usgs_url' ) ]}";
     my $rslt = _skip_it(eval {$ua->get($pxy)},
 	'Unable to execute GET (should not happen)');
 
-    my $accessed = $rslt->is_success() || $rslt->code() == HTTP_BAD_REQUEST;
-    if ( $ENV{AUTHOR_TESTING} ) {
-	ok $accessed, "Can access $pxy" or do {
-	    diag $rslt->status_line();
-	    done_testing;
-	    exit;
-	};
-    } else {
-	_skip_it( $rslt->is_success() || $rslt->code() == HTTP_BAD_REQUEST,
-	    "Unable to access $pxy: @{[ $rslt->status_line() ]}");
-    }
+    _skip_it( $rslt->is_success() || $rslt->code() == HTTP_BAD_REQUEST,
+	"Unable to access $pxy: @{[ $rslt->status_line() ]}");
 }
 
 #x# my $ele_dataset = 'Elev_DC_Washington';	# Expected data set
@@ -169,8 +160,14 @@ sub _skip_it {
     @args > 1
 	or unshift @args, undef;  # Because eval{} returns () in list context.
     my ($check, $reason) = @args;
-    unless ($check) {
-	plan (skip_all => $reason);
+    if ( $ENV{AUTHOR_TESTING} ) {
+	local $Test::Builder::Level = $Test::Builder::Level + 1;
+	unless ( ok $check, $reason ) {
+	    done_testing;
+	    exit;
+	}
+    } elsif ( ! $check ) {
+	plan skip_all => $reason;
 	exit;
     }
     return $check;
