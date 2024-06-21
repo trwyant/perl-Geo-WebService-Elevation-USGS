@@ -1,9 +1,4 @@
-0.199_02	2024-06-13	T. R. Wyant
-    Rethink AUTHOR_TESTING in t/elev.t. Instead of special-casing the
-    results of the initial GET, just have _skip_it() turn the skip into
-    a test, exiting if it fails.
-
-0.199_01	2024-06-12	T. R. Wyant
+0.200		2024-06-21	T. R. Wyant
     Convert to use https://epqs.nationalmap.gov/v1/json
 
 0.120		2021-10-13	T. R. Wyant
