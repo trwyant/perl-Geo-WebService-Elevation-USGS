@@ -23,13 +23,13 @@ use constant TOLERANCE_FEET	=> 0.5;
 use constant TOLERANCE_METERS	=> 0 + sprintf '%.2f', TOLERANCE_FEET * FEET_TO_METERS;
 
 _skip_it(eval { require Geo::WebService::Elevation::USGS; 1; },
-    'Unable to load Geo::WebService::Elevation::USGS');
+    'Able to load Geo::WebService::Elevation::USGS');
 
 _skip_it(eval { require LWP::UserAgent; 1; },
-    'Unable to load LWP::UserAgent (should not happen)');
+    'Able to load LWP::UserAgent');
 
 _skip_it(eval { require HTTP::Response; 1; },
-    'Unable to load HTTP::Response (should not happen)');
+    'Able to load HTTP::Response');
 
 my $ele = _skip_it(eval {Geo::WebService::Elevation::USGS->new(
 	    places => 2 )},
@@ -39,16 +39,16 @@ diag "Accessing @{[ $ele->get( 'usgs_url' ) ]}";
 
 {
     my $ua = _skip_it(eval {LWP::UserAgent->new()},
-	'Unable to instantiate LWP::UserAgent (should not happen)');
+	'Able to instantiate LWP::UserAgent');
 
     my $pxy = _skip_it(eval { $ele->USGS_URL() },
-	'Unable to retrieve USGS URL');
+	'Able to retrieve USGS URL');
 
     my $rslt = _skip_it(eval {$ua->get($pxy)},
-	'Unable to execute GET (should not happen)');
+	'Able to execute GET');
 
     _skip_it( $rslt->is_success() || $rslt->code() == HTTP_BAD_REQUEST,
-	"Unable to access $pxy: @{[ $rslt->status_line() ]}");
+	"Able to access $pxy", $rslt->status_line() );
 }
 
 #x# my $ele_dataset = 'Elev_DC_Washington';	# Expected data set
@@ -166,15 +166,16 @@ sub _skip_it {
     my @args = @_;
     @args > 1
 	or unshift @args, undef;  # Because eval{} returns () in list context.
-    my ($check, $reason) = @args;
+    my ( $check, $reason, @diag ) = @args;
     if ( $ENV{AUTHOR_TESTING} ) {
 	local $Test::Builder::Level = $Test::Builder::Level + 1;
 	unless ( ok $check, $reason ) {
+	    diag @diag;
 	    done_testing;
 	    exit;
 	}
     } elsif ( ! $check ) {
-	plan skip_all => $reason;
+	plan skip_all => @diag ? "$reason: @diag" : $reason;
 	exit;
     }
     return $check;
