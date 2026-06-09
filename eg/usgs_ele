@@ -204,6 +204,14 @@ Geo::WebService::Elevation::USGS attributes.
 
 This command terminates this script. End-of-file also works.
 
+=head2 elevation
+
+ usgs_ele> elevation 40 -90
+
+This command retrieves the elevation at a given position. The
+space-delimited arguments are latitude and longitude in degrees, with
+south latitude and west longitude negative.
+
 =head2 get
 
  usgs_ele> get units
