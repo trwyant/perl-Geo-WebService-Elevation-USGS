@@ -846,12 +846,11 @@ the module should work and what it should actually be called.
 Michael R. Davis provided prompt and helpful feedback on a testing
 problem in my first module to rely heavily on Test::More.
 
-=head1 BUGS
+=head1 SUPPORT
 
 Support is by the author. Please file bug reports at
-L<https://rt.cpan.org/Public/Dist/Display.html?Name=Geo-WebService-Elevation-USGS>,
-L<https://github.com/trwyant/perl-Geo-WebService-Elevation-USGS/issues>, or in
-electronic mail to the author.
+L<https://github.com/trwyant/perl-Geo-WebService-Elevation-USGS/issues>
+or in electronic mail to the author.
 
 =head1 SEE ALSO
 

@@ -181,8 +181,7 @@ at least L<Module::Build|Module::Build> version C<0.26>.
 =head1 SUPPORT
 
 Support is by the author. Please file bug reports at
-L<https://rt.cpan.org/Public/Dist/Display.html?Name=Geo-WebService-Elevation-USGS>,
-L<https://github.com/trwyant/perl-Geo-WebService-Elevation-USGS/issues>, or in
+L<https://github.com/trwyant/perl-Geo-WebService-Elevation-USGS/issues> or in
 electronic mail to the author.
 
 =head1 AUTHOR

@@ -59,8 +59,7 @@ sub meta_merge {
 	dynamic_config	=> 1,
 	resources	=> {
 	    bugtracker	=> {
-		web	=> 'https://rt.cpan.org/Public/Dist/Display.html?Name=Geo-WebService-Elevation-USGS',
-		# web	=> 'https://github.com/trwyant/perl-Geo-WebService-Elevation-USGS/issues',
+		web	=> 'https://github.com/trwyant/perl-Geo-WebService-Elevation-USGS/issues',
 		mailto  => 'harryfmudd@comcast.net',
 	    },
 	    license	=> 'http://dev.perl.org/licenses/',
@@ -340,8 +339,7 @@ information makes it into F<META.yml>.
 =head1 SUPPORT
 
 Support is by the author. Please file bug reports at
-L<https://rt.cpan.org/Public/Dist/Display.html?Name=Geo-WebService-Elevation-USGS>,
-L<https://github.com/trwyant/perl-Geo-WebService-Elevation-USGS/issues>, or in
+L<https://github.com/trwyant/perl-Geo-WebService-Elevation-USGS/issues> or in
 electronic mail to the author.
 
 =head1 AUTHOR
